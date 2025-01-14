@@ -122,6 +122,7 @@ class FVSLJ:
     def light_control_thread(self, handle):
         while self.keep_scanning:
             current_time = datetime.now().time()
+            print("Keep Scanning is on. We should see this 4 times") # are the other labjacks even getting to this point?
             if self.light_control == 1 and self.light_time_on is not None and self.light_time_off is not None:
                 if self.light_time_on <= current_time < self.light_time_off:
                     if self.light_state != True:
