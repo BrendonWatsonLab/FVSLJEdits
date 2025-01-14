@@ -1,0 +1,3 @@
+[console_scripts]
+FVSLJ = FVSLJ.FVSLJ:main
+FVSLJ_readbin = FVSLJ.readbin:main

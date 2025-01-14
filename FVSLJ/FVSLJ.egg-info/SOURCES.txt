@@ -1,0 +1,14 @@
+MANIFEST.in
+README.md
+setup.py
+FVSLJ/FVSLJ.py
+FVSLJ/__init__.py
+FVSLJ/configuration.py
+FVSLJ/data_record.py
+FVSLJ/readbin.py
+FVSLJ.egg-info/PKG-INFO
+FVSLJ.egg-info/SOURCES.txt
+FVSLJ.egg-info/dependency_links.txt
+FVSLJ.egg-info/entry_points.txt
+FVSLJ.egg-info/requires.txt
+FVSLJ.egg-info/top_level.txt

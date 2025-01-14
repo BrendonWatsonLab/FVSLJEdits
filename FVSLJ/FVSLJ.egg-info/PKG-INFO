@@ -1,0 +1,22 @@
+Metadata-Version: 2.1
+Name: FVSLJ
+Version: 0.1.1
+Summary: Watson Lab data acquisition scripts using LabJack T7 devices
+Author: FVS LLC
+Author-email: feviscientific@gmail.com
+Classifier: Programming Language :: Python :: 3
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown
+Requires-Dist: labjack-ljm
+
+# FVSLJ
+
+A package for controlling LabJack devices.
+
+## Installation
+
+You can install this package using pip:
+
+```bash
+pip install .
