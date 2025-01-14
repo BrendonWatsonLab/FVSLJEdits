@@ -29,6 +29,7 @@ class FVSLJ:
         self.controller_labjack = None
         self.output_directory = None
         self.start_event = threading.Event()  # Event to synchronize stream start
+        self.force_light_control = False
 
     def open_labjack(self, serial_number):
         handle = ljm.openS("ANY", "ANY", str(serial_number))
@@ -121,6 +122,10 @@ class FVSLJ:
 
     def light_control_thread(self, handle):
         while self.keep_scanning:
+            if self.force_light_control:
+                time.sleep(1)
+                continue  # Skip usual scheduling if forced control is active
+
             current_time = datetime.now().time()
             if self.light_control == 1 and self.light_time_on is not None and self.light_time_off is not None:
                 if self.light_time_on <= current_time < self.light_time_off:
@@ -132,6 +137,26 @@ class FVSLJ:
                         self.turn_light_off(handle)
                         self.light_state = False
             time.sleep(1)  # Check every second
+
+    def turn_all_lights_on(self):
+        print("Forcing all lights on.")
+        self.force_light_control = True
+        for name, serial in self.device_configurations.items():
+            handle, _ = self.open_labjack(serial)
+            self.turn_light_on(handle)
+            self.close_labjack(handle)
+
+    def turn_all_lights_off(self):
+        print("Forcing all lights off.")
+        self.force_light_control = True
+        for name, serial in self.device_configurations.items():
+            handle, _ = self.open_labjack(serial)
+            self.turn_light_off(handle)
+            self.close_labjack(handle)
+
+    def revert_to_light_schedule(self):
+        print("Reverting to scheduled light control.")
+        self.force_light_control = False
 
     def wait_for_high_input(self, handle):
         print("Waiting for high input on FIO2...")
@@ -178,9 +203,11 @@ class FVSLJ:
             self.close_labjack(handle)
 
     def run(self):
+        # getting data from the configuration file
         self.device_configurations = get_device_configurations("configurations.txt")
         self.light_control, self.light_time_on, self.light_time_off, self.controller_labjack, self.output_directory, samples_per_second = parse_aux_configurations("configurations.txt")
         print(self.device_configurations)
+
         if self.controller_labjack not in self.device_configurations:
             raise ValueError(f"Controller_labjack '{self.controller_labjack}' is not a registered device.\nMake sure configuration file contains line to assign controller_labjack and that the assigned device exists.")
 
@@ -188,7 +215,7 @@ class FVSLJ:
         if not os.path.exists(self.output_directory):
             os.makedirs(self.output_directory)
 
-        # Open the controller_labjack device and start the thread to wait for high input
+        # Open the controller_labjack device and start the thread to wait for high input on FIO2 (for syncing)
         controller_handle, _ = self.open_labjack(self.device_configurations[self.controller_labjack])
         controller_thread = threading.Thread(target=self.wait_for_high_input, args=(controller_handle,))
         self.threads.append(controller_thread)
@@ -209,7 +236,15 @@ class FVSLJ:
         self.start_event.set()  # Ensure all threads are released
 
 def main():
-    # Parse configurations to get the sample rate
+    # Initialize argument parser
+    parser = argparse.ArgumentParser(description='Control LabJack devices and lighting system.')
+    parser.add_argument('--lights-on', action='store_true', help='Force all lights on.')
+    parser.add_argument('--lights-off', action='store_true', help='Force all lights off.')
+    parser.add_argument('--use-schedule', action='store_true', help='Revert to scheduled lighting control.')
+
+    args = parser.parse_args()
+
+    # Parse configurations
     _, _, _, _, _, samples_per_second = parse_aux_configurations("configurations.txt")
 
     # Use the samples_per_second from the configuration file if it exists
@@ -217,16 +252,26 @@ def main():
     if samples_per_second is not None:
         SAMPLES_PER_SECOND = samples_per_second
 
+    # Setup and run the main FVSLJ operations
     aScanListNames = ["AIN0", "AIN1", "FIO0", "FIO1", "EIO0", "EIO1", "EIO2", "EIO3", "EIO4", "EIO5", "EIO6", "EIO7"]
     scanRate = SAMPLES_PER_SECOND
     scansPerRead = scanRate
     streamer = FVSLJ(aScanListNames, scanRate, scansPerRead)
 
+    # Direct light operations as per command-line arguments
+    if args.lights_on:
+        streamer.turn_all_lights_on()
+    elif args.lights_off:
+        streamer.turn_all_lights_off()
+    elif args.use_schedule:
+        streamer.revert_to_light_schedule()
+
     # Set up signal handling to stop scanning on interrupt
     signal.signal(signal.SIGINT, streamer.stop_scanning)
     signal.signal(signal.SIGTERM, streamer.stop_scanning)
 
-    streamer.run()
+    if not any([args.lights_on, args.lights_off, args.use_schedule]):
+        streamer.run()
 
 if __name__ == "__main__":
     main()
