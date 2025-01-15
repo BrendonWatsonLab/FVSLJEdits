@@ -196,12 +196,13 @@ class FVSLJ:
         controller_thread = threading.Thread(target=self.wait_for_high_input, args=(controller_handle,))
         self.threads.append(controller_thread)
         controller_thread.start()
-
+        print(f"STARTING THE INITAL CONTROLLER THREAD RN '{self.controller_labjack}'")
         # Start the other devices
         for name, serial in self.device_configurations.items():
             thread = threading.Thread(target=self.stream_device, args=(name, serial))
             self.threads.append(thread)
             thread.start()
+            print("OKAY OKAY OKAY NOW, WERE STARTING THE OTHER DEVICESSLIFDUBAK")
 
         for thread in self.threads:
             thread.join()
