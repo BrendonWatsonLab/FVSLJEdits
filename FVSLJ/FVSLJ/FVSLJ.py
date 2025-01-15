@@ -124,8 +124,8 @@ class FVSLJ:
             current_time = datetime.now().time()
             #other labjacks get to this point?
             if self.light_control == 1 and self.light_time_on is not None and self.light_time_off is not None:
-                print(name)
                 if self.light_time_on <= current_time < self.light_time_off:
+                    print(name)
                     if self.light_state != True:
                         self.turn_light_on(handle)
                         self.light_state = True
