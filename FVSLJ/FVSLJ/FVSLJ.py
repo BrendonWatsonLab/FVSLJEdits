@@ -125,15 +125,11 @@ class FVSLJ:
             #other labjacks get to this point?
             if self.light_control == 1 and self.light_time_on is not None and self.light_time_off is not None:
                 if self.light_time_on <= current_time < self.light_time_off:
-                    print(name + " SHOWTIME")
-                    if self.light_state != True:
-                        print(name + " IS GONNA TURN ON")
-                        self.turn_light_on(handle)
-                        self.light_state = True
+                    self.turn_light_on(handle)
+                    self.light_state = True
                 else:
-                    if self.light_state != False:
-                        self.turn_light_off(handle)
-                        self.light_state = False
+                    self.turn_light_off(handle)
+                    self.light_state = False
             time.sleep(1)  # Check every second
 
     def wait_for_high_input(self, handle):
@@ -232,12 +228,12 @@ def main():
     signal.signal(signal.SIGTERM, streamer.stop_scanning)
 
     # returns a handle: ljm.openS("ANY", "ANY", str(serial_number))
-    streamer.turn_light_on(handle=ljm.openS("ANY", "ANY", str(470031016))) #BB17
-    streamer.turn_light_on(handle=ljm.openS("ANY", "ANY", str(470028122))) #BB18
-    streamer.turn_light_on(handle=ljm.openS("ANY", "ANY", str(470028322))) #BB19
-    streamer.turn_light_on(handle=ljm.openS("ANY", "ANY", str(470028297))) #BB20
+    #streamer.turn_light_off(handle=ljm.openS("ANY", "ANY", str(470031016))) #BB17
+    #streamer.turn_light_off(handle=ljm.openS("ANY", "ANY", str(470028122))) #BB18
+    #streamer.turn_light_off(handle=ljm.openS("ANY", "ANY", str(470028322))) #BB19
+    #streamer.turn_light_off(handle=ljm.openS("ANY", "ANY", str(470028297))) #BB20
 
-    #streamer.run()
+    streamer.run()
 
 if __name__ == "__main__":
     main()
