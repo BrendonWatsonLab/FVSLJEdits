@@ -230,7 +230,13 @@ def main():
     signal.signal(signal.SIGINT, streamer.stop_scanning)
     signal.signal(signal.SIGTERM, streamer.stop_scanning)
 
-    streamer.run()
+    # returns a handle: ljm.openS("ANY", "ANY", str(serial_number))
+    streamer.turn_light_on(handle=ljm.openS("ANY", "ANY", str(470031016))) #BB17
+    streamer.turn_light_on(handle=ljm.openS("ANY", "ANY", str(470028122))) #BB18
+    streamer.turn_light_on(handle=ljm.openS("ANY", "ANY", str(470028322))) #BB19
+    streamer.turn_light_on(handle=ljm.openS("ANY", "ANY", str(470028297))) #BB20
+
+    #streamer.run()
 
 if __name__ == "__main__":
     main()
