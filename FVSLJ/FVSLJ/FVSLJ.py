@@ -25,7 +25,7 @@ class FVSLJ:
         self.light_control = 0
         self.light_time_on = None
         self.light_time_off = None
-        self.light_state = None  # None means unknown, True means on, False means off
+        self.light_state = False  # None means unknown, True means on, False means off
         self.controller_labjack = None
         self.output_directory = None
         self.start_event = threading.Event()  # Event to synchronize stream start
