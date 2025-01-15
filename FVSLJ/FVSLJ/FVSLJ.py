@@ -25,7 +25,7 @@ class FVSLJ:
         self.light_control = 0
         self.light_time_on = None
         self.light_time_off = None
-        self.light_state = False  # None means unknown, True means on, False means off
+        self.light_state = None  # None means unknown, True means on, False means off
         self.controller_labjack = None
         self.output_directory = None
         self.start_event = threading.Event()  # Event to synchronize stream start
@@ -168,6 +168,7 @@ class FVSLJ:
             # Start light control thread
             light_thread = threading.Thread(target=self.light_control_thread, args=(handle,name))
             light_thread.start()
+            print(name)
             self.threads.append(light_thread)
 
             self.perform_stream_reads(handle, device_type, name)
