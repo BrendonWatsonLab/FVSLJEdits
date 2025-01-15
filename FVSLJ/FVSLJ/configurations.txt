@@ -1,0 +1,14 @@
+labjack_1_name : "BB17"
+labjack_1_serial : 470031561
+labjack_2_name : "BB18"
+labjack_2_serial : 470031442
+labjack_3_name : "BB19"
+labjack_3_serial : 470028288
+labjack_4_name : "BB20"
+labjack_4_serial : 470031514
+controller_labjack : "BB17"
+output_directory : "C:/Users/WATSONLAB/Downloads/Noah's Folder/NKLJ(1.0.0)/output"
+print_feature : 0
+light_control : 1
+light_time_on : 12:00
+light_time_off : 16:10
