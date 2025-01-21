@@ -242,6 +242,7 @@ def main():
     keep_going = True
     while keep_going:
         keep_going = streamer.run()
+        streamer.threads = []
     
 if __name__ == "__main__":
     main()
