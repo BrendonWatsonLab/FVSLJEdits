@@ -199,7 +199,7 @@ class FVSLJ:
         # Open the controller_labjack device and start the thread to wait for high input
         controller_handle, _ = self.open_labjack(self.device_configurations[self.controller_labjack])
         controller_thread = threading.Thread(target=self.wait_for_high_input, args=(controller_handle,))
-        self.threads.append(controller_thread)
+        #self.threads.append(controller_thread)
         controller_thread.start()
 
         # Start the other devices
