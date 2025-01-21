@@ -28,6 +28,7 @@ class FVSLJ:
         self.controller_labjack = None
         self.output_directory = None
         self.start_event = threading.Event()  # Event to synchronize stream start
+        self.low_event = False
 
     def open_labjack(self, serial_number):
         handle = ljm.openS("ANY", "ANY", str(serial_number))
@@ -101,6 +102,9 @@ class FVSLJ:
 
                     timestamp += increment
 
+                if self.low_event:
+                    break
+
             end = datetime.now()
             tt = (end - start).seconds + float((end - start).microseconds) / 1000000
             print(f"\nTotal scans = {totScans}")
@@ -139,7 +143,11 @@ class FVSLJ:
             if state > 0.5:
                 print("High input detected on FIO2.")
                 self.start_event.set()  # Signal all threads to start
-                break
+                self.low_event = False
+            else:
+                print("Low input detected on FIO2.")
+                self.start_event.clear()
+                self.low_event = True
             time.sleep(1)
 
     def stop_stream(self, handle):
@@ -203,6 +211,8 @@ class FVSLJ:
         for thread in self.threads:
             thread.join()
 
+        return True
+
     def stop_scanning(self, signum, frame):
         print("\nInterrupt received, stopping scans...")
         self.keep_scanning = False
@@ -226,7 +236,9 @@ def main():
     signal.signal(signal.SIGINT, streamer.stop_scanning)
     signal.signal(signal.SIGTERM, streamer.stop_scanning)
 
-    streamer.run()
-
+    keep_going = True
+    while keep_going:
+        keep_going = streamer.run()
+    
 if __name__ == "__main__":
     main()
