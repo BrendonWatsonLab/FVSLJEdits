@@ -135,6 +135,8 @@ class FVSLJ:
                         self.turn_light_off(handle)
                         light_state = False
             time.sleep(1)  # Check every second
+            if self.low_event:
+                break
 
     def wait_for_high_input(self, handle):
         print("Waiting for high input on FIO2...")
