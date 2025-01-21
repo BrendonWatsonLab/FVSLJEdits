@@ -208,9 +208,10 @@ class FVSLJ:
             self.threads.append(thread)
             thread.start()
 
+        print("BEFORE THREAD JOIN")
         for thread in self.threads:
             thread.join()
-
+        print("AFTER THREAD JOIN")
         return True
 
     def stop_scanning(self, signum, frame):
