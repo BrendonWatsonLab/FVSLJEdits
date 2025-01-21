@@ -183,7 +183,7 @@ class FVSLJ:
             print(e)
         finally:
             self.stop_stream(handle)
-            self.close_labjack(handle)
+            #self.close_labjack(handle)
 
     def run(self):
         self.device_configurations = get_device_configurations("configurations.txt")
