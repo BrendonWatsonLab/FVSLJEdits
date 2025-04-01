@@ -28,6 +28,7 @@ class FVSLJ:
         self.controller_labjack = None
         self.output_directory = None
         self.start_event = threading.Event()  # Event to synchronize stream start
+        self.low_event = False
 
     def open_labjack(self, serial_number):
         handle = ljm.openS("ANY", "ANY", str(serial_number))
@@ -101,6 +102,9 @@ class FVSLJ:
 
                     timestamp += increment
 
+                if self.low_event:
+                    break
+
             end = datetime.now()
             tt = (end - start).seconds + float((end - start).microseconds) / 1000000
             print(f"\nTotal scans = {totScans}")
@@ -131,6 +135,8 @@ class FVSLJ:
                         self.turn_light_off(handle)
                         light_state = False
             time.sleep(1)  # Check every second
+            if self.low_event:
+                break
 
     def wait_for_high_input(self, handle):
         print("Waiting for high input on FIO2...")
@@ -139,7 +145,11 @@ class FVSLJ:
             if state > 0.5:
                 print("High input detected on FIO2.")
                 self.start_event.set()  # Signal all threads to start
-                break
+                self.low_event = False
+            else:
+                print("Low input detected on FIO2.")
+                self.start_event.clear()
+                self.low_event = True
             time.sleep(1)
 
     def stop_stream(self, handle):
@@ -175,7 +185,6 @@ class FVSLJ:
             print(e)
         finally:
             self.stop_stream(handle)
-            self.close_labjack(handle)
 
     def run(self):
         self.device_configurations = get_device_configurations("configurations.txt")
@@ -191,7 +200,6 @@ class FVSLJ:
         # Open the controller_labjack device and start the thread to wait for high input
         controller_handle, _ = self.open_labjack(self.device_configurations[self.controller_labjack])
         controller_thread = threading.Thread(target=self.wait_for_high_input, args=(controller_handle,))
-        self.threads.append(controller_thread)
         controller_thread.start()
 
         # Start the other devices
@@ -200,8 +208,11 @@ class FVSLJ:
             self.threads.append(thread)
             thread.start()
 
+        print("BEFORE THREAD JOIN")
         for thread in self.threads:
             thread.join()
+        print("AFTER THREAD JOIN")
+        return True
 
     def stop_scanning(self, signum, frame):
         print("\nInterrupt received, stopping scans...")
@@ -226,7 +237,10 @@ def main():
     signal.signal(signal.SIGINT, streamer.stop_scanning)
     signal.signal(signal.SIGTERM, streamer.stop_scanning)
 
-    streamer.run()
+    keep_going = True
+    while keep_going:
+        keep_going = streamer.run()
+        streamer.threads = []
 
 if __name__ == "__main__":
     main()
