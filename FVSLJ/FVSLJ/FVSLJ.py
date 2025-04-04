@@ -7,6 +7,9 @@ from datetime import datetime
 import time
 from FVSLJ.data_record import DataRecord
 from FVSLJ.configuration import get_device_configurations, parse_aux_configurations
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 # Default value for samples per second
 SAMPLES_PER_SECOND = 51
@@ -94,6 +97,8 @@ class FVSLJ:
                     wheel = aData[i * len(self.aScanListNames) + self.aScanListNames.index("AIN0")]
                     pulse = aData[i * len(self.aScanListNames) + self.aScanListNames.index("FIO1")] > 0.5
                     camera = aData[i * len(self.aScanListNames) + self.aScanListNames.index("FIO0")] > 0.5
+
+                    #TODO I NEED TO ADD IN A VISUALIZATION PIECE OF CODE RIGHT ROUND YONDER!!!
 
                     data_record = DataRecord(timestamp, digitalStatus, lightStatus, wheel, pulse, camera)
                     file.write(data_record.to_binary())
