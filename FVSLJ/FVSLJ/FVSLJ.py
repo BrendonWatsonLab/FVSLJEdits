@@ -31,7 +31,20 @@ class FVSLJ:
         self.controller_labjack = None
         self.output_directory = None
         self.start_event = threading.Event()  # Event to synchronize stream start
-        self.low_event = False
+        self.fig, (self.ax_wheel, self.ax_light, self.ax_pulse) = plt.subplots()
+        self.xdata = []
+        self.wheel_data = []
+        self.light_data = []
+        self.pulse_data = []
+        self.ln_wheel, = self.ax_wheel.plot([] ,[], '-', animated=True)
+        self.ln_pulse, = self.ax_pulse.plot([] ,[], '-', animated=True)
+        self.ln_light, = self.ax_light.plot([] ,[], '-', animated=True)
+        for ax in [self.ax_wheel, self.ax_light, self.ax_pulse]:
+            ax.set_xlim(0, 10)
+            ax.set_ylim(-1.5, 1.5)
+        #start time
+        self.start_time = time.time()
+
 
     def open_labjack(self, serial_number):
         handle = ljm.openS("ANY", "ANY", str(serial_number))
@@ -97,18 +110,23 @@ class FVSLJ:
                     wheel = aData[i * len(self.aScanListNames) + self.aScanListNames.index("AIN0")]
                     pulse = aData[i * len(self.aScanListNames) + self.aScanListNames.index("FIO1")] > 0.5
                     camera = aData[i * len(self.aScanListNames) + self.aScanListNames.index("FIO0")] > 0.5
-
+                    
                     #TODO I NEED TO ADD IN A VISUALIZATION PIECE OF CODE RIGHT ROUND YONDER!!!
 
+                    current_time = time.time() - self.start_time
+                   
+                    self.xdata.append(current_time)
+                    self.wheel_data.append(wheel)
+                    self.pulse_data.append(pulse)
+                    self.light_data.append(lightStatus)
+                    
+                
                     data_record = DataRecord(timestamp, digitalStatus, lightStatus, wheel, pulse, camera)
                     file.write(data_record.to_binary())
                     if i == 0:
                         print(data_record)
 
                     timestamp += increment
-
-                if self.low_event:
-                    break
 
             end = datetime.now()
             tt = (end - start).seconds + float((end - start).microseconds) / 1000000
@@ -118,6 +136,25 @@ class FVSLJ:
             print(f"Timed Scan Rate = {totScans / tt} scans/second")
             print(f"Timed Sample Rate = {totScans * len(self.aScanListNames) / tt} samples/second")
             print(f"Skipped scans = {totSkip / len(self.aScanListNames):.0f}")
+
+    def update(self, frame):
+        #append values 
+        
+        if len(self.xdata) > 500:
+            self.xdata.pop(0)
+            self.wheel_data.pop(0)
+            self.light_data.pop(0)
+            self.pulse_data.pop(0)
+
+        self.ln_wheel.set_data(self.xdata, self.wheel_data)
+        self.ln_light.set_data(self.xdata, self.light_data)
+        self.ln_pulse.set_data(self.xdata, self.pulse_data)
+
+        #move x-axis?
+        return self.ln_wheel, self.ln_light, self.ln_pulse
+    
+
+        
 
     def turn_light_on(self, handle):
         ljm.eWriteName(handle, "DIO17", 1)
@@ -140,8 +177,6 @@ class FVSLJ:
                         self.turn_light_off(handle)
                         light_state = False
             time.sleep(1)  # Check every second
-            if self.low_event:
-                break
 
     def wait_for_high_input(self, handle):
         print("Waiting for high input on FIO2...")
@@ -150,11 +185,7 @@ class FVSLJ:
             if state > 0.5:
                 print("High input detected on FIO2.")
                 self.start_event.set()  # Signal all threads to start
-                self.low_event = False
-            else:
-                print("Low input detected on FIO2.")
-                self.start_event.clear()
-                self.low_event = True
+                break
             time.sleep(1)
 
     def stop_stream(self, handle):
@@ -190,6 +221,7 @@ class FVSLJ:
             print(e)
         finally:
             self.stop_stream(handle)
+            self.close_labjack(handle)
 
     def run(self):
         self.device_configurations = get_device_configurations("configurations.txt")
@@ -205,6 +237,7 @@ class FVSLJ:
         # Open the controller_labjack device and start the thread to wait for high input
         controller_handle, _ = self.open_labjack(self.device_configurations[self.controller_labjack])
         controller_thread = threading.Thread(target=self.wait_for_high_input, args=(controller_handle,))
+        self.threads.append(controller_thread)
         controller_thread.start()
 
         # Start the other devices
@@ -213,11 +246,8 @@ class FVSLJ:
             self.threads.append(thread)
             thread.start()
 
-        print("BEFORE THREAD JOIN")
         for thread in self.threads:
             thread.join()
-        print("AFTER THREAD JOIN")
-        return True
 
     def stop_scanning(self, signum, frame):
         print("\nInterrupt received, stopping scans...")
@@ -242,10 +272,10 @@ def main():
     signal.signal(signal.SIGINT, streamer.stop_scanning)
     signal.signal(signal.SIGTERM, streamer.stop_scanning)
 
-    keep_going = True
-    while keep_going:
-        keep_going = streamer.run()
-        streamer.threads = []
-
+    streamer.run()
+    
+    ani = animation.FuncAnimation(self.fig, self.update, blit=True, interval=50)
+    plt.show()
+    
 if __name__ == "__main__":
     main()
