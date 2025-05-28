@@ -143,7 +143,7 @@ class FVSLJ:
                     #TODO I NEED TO ADD IN A VISUALIZATION PIECE OF CODE RIGHT ROUND YONDER!!
                     
                 
-                    data_record = DataRecord(timestamp, digitalStatus, lightStatus, wheel, pulse, camera)
+                    data_record = DataRecord(timestamp, digitalStatus, lightStatus, self.wheel, self.pulse, self.light)
                     file.write(data_record.to_binary())
                     if i == 0:
                         print(data_record)
