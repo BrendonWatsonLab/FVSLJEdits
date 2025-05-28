@@ -31,8 +31,13 @@ class FVSLJ:
         self.controller_labjack = None
         self.output_directory = None
         self.start_event = threading.Event()  # Event to synchronize stream start
-        self.fig, (self.ax_wheel, self.ax_light, self.ax_pulse) = plt.subplots()
+        self.fig_wheel, self.ax_wheel = plt.subplots()
+        self.fig_light, self.ax_light = plt.subplots()
+        self.fig_pulse, self.ax_pulse  = plt.subplots()
         self.xdata = []
+        self.wheel = []
+        self.pulse = []
+        self.light = []
         self.wheel_data = []
         self.light_data = []
         self.pulse_data = []
@@ -45,14 +50,38 @@ class FVSLJ:
         #start time
         self.start_time = time.time()
 
+    def update_plot(self, frame):
+        elapsed = time.time() - self.start_time
+        self.xdata.append(elapsed)
+        self.wheel_data.append(self.wheel)  # add wheel data
+        self.light_data.append(self.light)  # addlight data
+        self.pulse_data.append(self.pulse)  # add pulse data
 
+        # 10 secs of data
+        if len(self.xdata) > self.scanRate * 10:
+            self.xdata.pop(0)
+            self.wheel_data.pop(0)
+            self.light_data.pop(0)
+            self.pulse_data.pop(0)
+
+        self.ln_wheel.set_data(self.xdata, self.wheel_data)
+        self.ln_light.set_data(self.xdata, self.light_data)
+        self.ln_pulse.set_data(self.xdata, self.pulse_data)
+
+        #shift x - axis
+        self.ax_wheel.set_xlim(max(0, elapsed - 10), elapsed)
+        self.ax_light.set_xlim(max(0, elapsed - 10), elapsed)
+        self.ax_pulse.set_xlim(max(0, elapsed - 10), elapsed)
+
+        return self.ln_wheel, self.ln_light, self.ln_pulse
+    
     def open_labjack(self, serial_number):
         handle = ljm.openS("ANY", "ANY", str(serial_number))
         info = ljm.getHandleInfo(handle)
         device_type = info[0]
         print(f"Opened a LabJack with Device type: {info[0]}, Connection type: {info[1]},\n"
               f"Serial number: {info[2]}, IP address: {ljm.numberToIP(info[3])}, Port: {info[4]},\n"
-              f"Max bytes per MB: {info[5]}")
+              f"Max bytes per MB: {info[5]}") 
         return handle, device_type
 
     def configure_stream(self, handle, device_type):
@@ -107,18 +136,11 @@ class FVSLJ:
                 for i in range(int(scans)):
                     digitalStatus = int(''.join(['1' if aData[i * len(self.aScanListNames) + self.aScanListNames.index(f"EIO{j}")] > 0.5 else '0' for j in range(8)]), 2)
                     lightStatus = aData[i * len(self.aScanListNames) + self.aScanListNames.index("AIN1")] > 0.5
-                    wheel = aData[i * len(self.aScanListNames) + self.aScanListNames.index("AIN0")]
-                    pulse = aData[i * len(self.aScanListNames) + self.aScanListNames.index("FIO1")] > 0.5
-                    camera = aData[i * len(self.aScanListNames) + self.aScanListNames.index("FIO0")] > 0.5
+                    self.wheel = aData[i * len(self.aScanListNames) + self.aScanListNames.index("AIN0")]
+                    self.pulse = aData[i * len(self.aScanListNames) + self.aScanListNames.index("FIO1")] > 0.5
+                    self.light = aData[i * len(self.aScanListNames) + self.aScanListNames.index("FIO0")] > 0.5
                     
-                    #TODO I NEED TO ADD IN A VISUALIZATION PIECE OF CODE RIGHT ROUND YONDER!!!
-
-                    current_time = time.time() - self.start_time
-                   
-                    self.xdata.append(current_time)
-                    self.wheel_data.append(wheel)
-                    self.pulse_data.append(pulse)
-                    self.light_data.append(lightStatus)
+                    #TODO I NEED TO ADD IN A VISUALIZATION PIECE OF CODE RIGHT ROUND YONDER!!
                     
                 
                     data_record = DataRecord(timestamp, digitalStatus, lightStatus, wheel, pulse, camera)
@@ -136,26 +158,7 @@ class FVSLJ:
             print(f"Timed Scan Rate = {totScans / tt} scans/second")
             print(f"Timed Sample Rate = {totScans * len(self.aScanListNames) / tt} samples/second")
             print(f"Skipped scans = {totSkip / len(self.aScanListNames):.0f}")
-
-    def update(self, frame):
-        #append values 
-        
-        if len(self.xdata) > 500:
-            self.xdata.pop(0)
-            self.wheel_data.pop(0)
-            self.light_data.pop(0)
-            self.pulse_data.pop(0)
-
-        self.ln_wheel.set_data(self.xdata, self.wheel_data)
-        self.ln_light.set_data(self.xdata, self.light_data)
-        self.ln_pulse.set_data(self.xdata, self.pulse_data)
-
-        #move x-axis?
-        return self.ln_wheel, self.ln_light, self.ln_pulse
     
-
-        
-
     def turn_light_on(self, handle):
         ljm.eWriteName(handle, "DIO17", 1)
         print("Light turned on")
@@ -273,9 +276,9 @@ def main():
     signal.signal(signal.SIGTERM, streamer.stop_scanning)
 
     streamer.run()
-    
-    ani = animation.FuncAnimation(self.fig, self.update, blit=True, interval=50)
+
+    ani = animation.FuncAnimation(streamer.fig, streamer.update_plot, frames=range(0,50),  blit=True, interval=1000)
     plt.show()
-    
+
 if __name__ == "__main__":
     main()
