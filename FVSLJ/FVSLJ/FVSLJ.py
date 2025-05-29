@@ -40,8 +40,8 @@ class FVSLJ:
         self.light_data = []
         self.pulse_data = []
         self.ln_wheel, = self.ax_wheel.plot([] ,[], '-', animated=True, label='Wheel')
-        self.ln_pulse, = self.ax_pulse.plot([] ,[], '-', animated=True, label = 'Light')
-        self.ln_light, = self.ax_light.plot([] ,[], '-', animated=True, label = 'Beam Break')
+        self.ln_pulse, = self.ax_pulse.plot([] ,[], '-', animated=True, label = 'Beam Break')
+        self.ln_light, = self.ax_light.plot([] ,[], '-', animated=True, label = 'Light')
         for ax in [self.ax_wheel, self.ax_light, self.ax_pulse]:
             ax.set_xlim(0, 10)
             ax.set_ylim(-1.5, 1.5)
@@ -252,7 +252,8 @@ class FVSLJ:
         current_time = self.xdata[-1]
         for ax in [self.ax_wheel, self.ax_light, self.ax_pulse]:
             ax.set_xlim(max(0, current_time - 10), current_time)
-
+        
+        print(len(self.xdata), len(self.wheel_data), len(self.light_data))
         return self.ln_wheel, self.ln_light, self.ln_pulse
         
 
