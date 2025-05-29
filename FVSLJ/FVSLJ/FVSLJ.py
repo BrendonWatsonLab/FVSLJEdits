@@ -254,6 +254,7 @@ class FVSLJ:
             ax.set_xlim(max(0, current_time - 10), current_time)
         
         print(len(self.xdata), len(self.wheel_data), len(self.light_data))
+
         return self.ln_wheel, self.ln_light, self.ln_pulse
         
 
@@ -276,7 +277,7 @@ def main():
     signal.signal(signal.SIGTERM, streamer.stop_scanning)
 
     streamer.run()
-
+    print("Starting animation...")
     ani = animation.FuncAnimation(streamer.fig, streamer.update_plot, blit=True, interval=100)
     plt.show()
 
