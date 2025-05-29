@@ -31,9 +31,7 @@ class FVSLJ:
         self.controller_labjack = None
         self.output_directory = None
         self.start_event = threading.Event()  # Event to synchronize stream start
-        self.fig_wheel, self.ax_wheel = plt.subplots()
-        self.fig_light, self.ax_light = plt.subplots()
-        self.fig_pulse, self.ax_pulse  = plt.subplots()
+        self.fig,(self.ax_wheel, self.ax_light, self.ax_pulse)  = plt.subplots(3, 1)
         self.xdata = []
         self.wheel = []
         self.pulse = []
@@ -50,31 +48,7 @@ class FVSLJ:
         #start time
         self.start_time = time.time()
 
-    def update_plot(self, frame):
-        elapsed = time.time() - self.start_time
-        self.xdata.append(elapsed)
-        self.wheel_data.append(self.wheel)  # add wheel data
-        self.light_data.append(self.light)  # addlight data
-        self.pulse_data.append(self.pulse)  # add pulse data
 
-        # 10 secs of data
-        if len(self.xdata) > self.scanRate * 10:
-            self.xdata.pop(0)
-            self.wheel_data.pop(0)
-            self.light_data.pop(0)
-            self.pulse_data.pop(0)
-
-        self.ln_wheel.set_data(self.xdata, self.wheel_data)
-        self.ln_light.set_data(self.xdata, self.light_data)
-        self.ln_pulse.set_data(self.xdata, self.pulse_data)
-
-        #shift x - axis
-        self.ax_wheel.set_xlim(max(0, elapsed - 10), elapsed)
-        self.ax_light.set_xlim(max(0, elapsed - 10), elapsed)
-        self.ax_pulse.set_xlim(max(0, elapsed - 10), elapsed)
-
-        return self.ln_wheel, self.ln_light, self.ln_pulse
-    
     def open_labjack(self, serial_number):
         handle = ljm.openS("ANY", "ANY", str(serial_number))
         info = ljm.getHandleInfo(handle)
@@ -256,6 +230,31 @@ class FVSLJ:
         print("\nInterrupt received, stopping scans...")
         self.keep_scanning = False
         self.start_event.set()  # Ensure all threads are released
+
+    def update_plot(self, frame):
+        elapsed = time.time() - self.start_time
+        self.xdata.append(elapsed)
+        self.wheel_data.append(self.wheel)  # add wheel data
+        self.light_data.append(self.light)  # add light data
+        self.pulse_data.append(self.pulse)  # add pulse data
+
+        # 10 secs of data
+        if len(self.xdata) > self.scanRate * 10:
+            self.xdata.pop(0)
+            self.wheel_data.pop(0)
+            self.light_data.pop(0)
+            self.pulse_data.pop(0)
+
+        self.ln_wheel.set_data(self.xdata, self.wheel_data)
+        self.ln_light.set_data(self.xdata, self.light_data)
+        self.ln_pulse.set_data(self.xdata, self.pulse_data)
+
+        #shift x - axis
+        self.ax_wheel.set_xlim(max(0, elapsed - 10), elapsed)
+        self.ax_light.set_xlim(max(0, elapsed - 10), elapsed)
+        self.ax_pulse.set_xlim(max(0, elapsed - 10), elapsed)
+
+        return self.ln_wheel, self.ln_light, self.ln_pulse
 
 def main():
     # Parse configurations to get the sample rate
