@@ -264,7 +264,7 @@ class FVSLJ:
         
     def start_animation(self):
         print("Starting animation...")
-        self.ani = animation.FuncAnimation(self.fig, self.update_plot, frames=None, blit=True, interval=1000)
+        self.ani = animation.FuncAnimation(self.fig, self.update_plot, frames=None, blit=True, interval=1000 // self.scanRate)
         plt.tight_layout()
         plt.show()
         
@@ -287,8 +287,6 @@ def main():
     signal.signal(signal.SIGTERM, streamer.stop_scanning)
 
     streamer.run()
-    streamer.start_animation()
-
    
     
 
