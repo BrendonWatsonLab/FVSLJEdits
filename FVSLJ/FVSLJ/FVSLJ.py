@@ -47,6 +47,7 @@ class FVSLJ:
             ax.set_ylim(-1.5, 1.5)
         #start time
         self.start_time = time.time()
+        self.ani = animation.FuncAnimation(...)
 
 
     def open_labjack(self, serial_number):
@@ -202,8 +203,8 @@ class FVSLJ:
             light_thread = threading.Thread(target=self.light_control_thread, args=(handle, light_state))
             light_thread.start()
             self.threads.append(light_thread)
-
             self.perform_stream_reads(handle, device_type, name)
+            
         except ljm.LJMError as ljme:
             print(ljme)
         except Exception as e:
@@ -259,7 +260,13 @@ class FVSLJ:
 
         return self.ln_wheel, self.ln_light, self.ln_pulse
         
+    def start_animation(self):
+        print("Starting animation...")
 
+        self.ani = animation.FuncAnimation(self.fig, self.update_plot, blit=True, interval=1000)
+    plt.tight_layout()
+    plt.show()
+        
 def main():
     # Parse configurations to get the sample rate
     _, _, _, _, _, samples_per_second = parse_aux_configurations("configurations.txt")
@@ -278,11 +285,10 @@ def main():
     signal.signal(signal.SIGINT, streamer.stop_scanning)
     signal.signal(signal.SIGTERM, streamer.stop_scanning)
 
-    print("Starting animation...")
-    ani = animation.FuncAnimation(streamer.fig, streamer.update_plot, blit=True, interval=100)
-    plt.show()
-
     streamer.run()
+    streamer.start_animation()
+
+   
     
 
 if __name__ == "__main__":
