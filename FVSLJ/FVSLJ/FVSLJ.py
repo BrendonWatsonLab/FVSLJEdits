@@ -190,8 +190,9 @@ class FVSLJ:
 
     def stream_device(self, name, serial):
         print(f"\nConnecting to device {name} with serial number {serial}")
-        handle, device_type = self.open_labjack(serial)
+        handle = None
         try:
+            handle, device_type = self.open_labjack(serial)
             self.configure_stream(handle, device_type)
             self.start_event.wait()  # Wait for the signal to start
             self.start_stream(handle)
@@ -208,8 +209,9 @@ class FVSLJ:
         except Exception as e:
             print(e)
         finally:
-            self.stop_stream(handle)
-            self.close_labjack(handle)
+            if handle is not None:
+                self.stop_stream(handle)
+                self.close_labjack(handle)
 
     def run(self):
         self.device_configurations = get_device_configurations("configurations.txt")
