@@ -122,7 +122,7 @@ class FVSLJ:
                     self.pulse_data.append(self.light)
 
                 
-                    if len(self.xdata) > 500:  # Keep only last 100 points
+                    if len(self.xdata) > 50:  # Keep only last 50 points
                         self.xdata.pop(0)
                         self.wheel_data.pop(0)
                         self.light_data.pop(0)
@@ -245,6 +245,8 @@ class FVSLJ:
         self.start_event.set()  # Ensure all threads are released
 
     def update_plot(self, frames):
+        if not self.xdata:
+            return self.ln_wheel, self.ln_light, self.ln_pulse
         self.ln_wheel.set_data(self.xdata, self.wheel_data)
         self.ln_light.set_data(self.xdata, self.light_data)
         self.ln_pulse.set_data(self.xdata, self.pulse_data)
@@ -279,7 +281,7 @@ def main():
     print("Starting animation...")
     ani = animation.FuncAnimation(streamer.fig, streamer.update_plot, blit=True, interval=100)
     plt.show()
-    
+
     streamer.run()
     
 
