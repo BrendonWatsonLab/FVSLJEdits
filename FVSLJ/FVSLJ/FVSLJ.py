@@ -39,9 +39,9 @@ class FVSLJ:
         self.wheel_data = []
         self.light_data = []
         self.pulse_data = []
-        self.ln_wheel, = self.ax_wheel.plot([] ,[], '-', animated=True)
-        self.ln_pulse, = self.ax_pulse.plot([] ,[], '-', animated=True)
-        self.ln_light, = self.ax_light.plot([] ,[], '-', animated=True)
+        self.ln_wheel, = self.ax_wheel.plot([] ,[], '-', animated=True, label='Wheel')
+        self.ln_pulse, = self.ax_pulse.plot([] ,[], '-', animated=True, label = 'Light')
+        self.ln_light, = self.ax_light.plot([] ,[], '-', animated=True, label = 'Beam Break')
         for ax in [self.ax_wheel, self.ax_light, self.ax_pulse]:
             ax.set_xlim(0, 10)
             ax.set_ylim(-1.5, 1.5)
@@ -115,7 +115,18 @@ class FVSLJ:
                     self.light = aData[i * len(self.aScanListNames) + self.aScanListNames.index("FIO0")] > 0.5
                     
                     #TODO I NEED TO ADD IN A VISUALIZATION PIECE OF CODE RIGHT ROUND YONDER!!
-                    
+                    current_time = time.time() - self.start_time
+                    self.xdata.append(current_time)
+                    self.wheel_data.append(self.wheel)
+                    self.light_data.append(self.pulse)
+                    self.pulse_data.append(self.light)
+
+                
+                    if len(self.xdata) > 500:  # Keep only last 100 points
+                        self.xdata.pop(0)
+                        self.wheel_data.pop(0)
+                        self.light_data.pop(0)
+                        self.pulse_data.pop(0)
                 
                     data_record = DataRecord(timestamp, digitalStatus, lightStatus, self.wheel, self.pulse, self.light)
                     file.write(data_record.to_binary())
@@ -232,29 +243,16 @@ class FVSLJ:
         self.start_event.set()  # Ensure all threads are released
 
     def update_plot(self, frame):
-        elapsed = time.time() - self.start_time
-        self.xdata.append(elapsed)
-        self.wheel_data.append(self.wheel)  # add wheel data
-        self.light_data.append(self.light)  # add light data
-        self.pulse_data.append(self.pulse)  # add pulse data
-
-        # 10 secs of data
-        if len(self.xdata) > self.scanRate * 10:
-            self.xdata.pop(0)
-            self.wheel_data.pop(0)
-            self.light_data.pop(0)
-            self.pulse_data.pop(0)
-
         self.ln_wheel.set_data(self.xdata, self.wheel_data)
         self.ln_light.set_data(self.xdata, self.light_data)
         self.ln_pulse.set_data(self.xdata, self.pulse_data)
 
-        #shift x - axis
-        self.ax_wheel.set_xlim(max(0, elapsed - 10), elapsed)
-        self.ax_light.set_xlim(max(0, elapsed - 10), elapsed)
-        self.ax_pulse.set_xlim(max(0, elapsed - 10), elapsed)
+        current_time = self.xdata[-1]
+        for ax in [self.ax_wheel, self.ax_light, self.ax_pulse]:
+            ax.set_xlim(max(0, current_time - 10), current_time)
 
         return self.ln_wheel, self.ln_light, self.ln_pulse
+        
 
 def main():
     # Parse configurations to get the sample rate
@@ -276,7 +274,7 @@ def main():
 
     streamer.run()
 
-    ani = animation.FuncAnimation(streamer.fig, streamer.update_plot, frames=range(0,50),  blit=True, interval=1000)
+    ani = animation.FuncAnimation(streamer.fig, streamer.update_plot, blit=True, interval=100)
     plt.show()
 
 if __name__ == "__main__":
