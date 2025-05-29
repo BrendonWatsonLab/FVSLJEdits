@@ -276,10 +276,12 @@ def main():
     signal.signal(signal.SIGINT, streamer.stop_scanning)
     signal.signal(signal.SIGTERM, streamer.stop_scanning)
 
-    streamer.run()
     print("Starting animation...")
     ani = animation.FuncAnimation(streamer.fig, streamer.update_plot, blit=True, interval=100)
     plt.show()
+    
+    streamer.run()
+    
 
 if __name__ == "__main__":
     main()
