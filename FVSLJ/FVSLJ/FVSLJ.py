@@ -190,6 +190,7 @@ class FVSLJ:
 
     def stream_device(self, name, serial):
         print(f"\nConnecting to device {name} with serial number {serial}")
+        handle, device_type = self.open_labjack(serial)
         try:
             handle, device_type = self.open_labjack(serial)
             self.configure_stream(handle, device_type)
@@ -242,7 +243,7 @@ class FVSLJ:
         self.keep_scanning = False
         self.start_event.set()  # Ensure all threads are released
 
-    def update_plot(self, handle):
+    def update_plot(self, frames):
         self.ln_wheel.set_data(self.xdata, self.wheel_data)
         self.ln_light.set_data(self.xdata, self.light_data)
         self.ln_pulse.set_data(self.xdata, self.pulse_data)
