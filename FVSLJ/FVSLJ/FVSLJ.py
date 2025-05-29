@@ -123,7 +123,6 @@ class FVSLJ:
                     self.wheel_data.append(self.wheel)
                     self.light_data.append(self.pulse)
                     self.pulse_data.append(self.light)
-
                 
                     if len(self.xdata) > 50:  # Keep only last 50 points
                         self.xdata.pop(0)
@@ -252,6 +251,7 @@ class FVSLJ:
         self.start_animation()  
 
     def update_plot(self, frames):
+        print(f"Data lengths: x={len(self.xdata)}, wheel={len(self.wheel_data)}, light={len(self.light_data)}, pulse={len(self.pulse_data)}")
         if not self.xdata:
             return self.ln_wheel, self.ln_light, self.ln_pulse
         self.ln_wheel.set_data(self.xdata, self.wheel_data)
