@@ -173,7 +173,8 @@ class FVSLJ:
             state = ljm.eReadName(handle, "FIO2")
             if state > 0.5:
                 print("High input detected on FIO2.")
-                self.start_event.set()  # Signal all threads to start
+                self.start_event.set() 
+                self.start_animation() # Signal all threads to start
                 break
             time.sleep(1)
 
@@ -243,7 +244,8 @@ class FVSLJ:
     def stop_scanning(self, signum, frame):
         print("\nInterrupt received, stopping scans...")
         self.keep_scanning = False
-        self.start_event.set()  # Ensure all threads are released
+        self.start_event.set() # Ensure all threads are released
+        self.start_animation()  
 
     def update_plot(self, frames):
         if not self.xdata:
