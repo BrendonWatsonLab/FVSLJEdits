@@ -236,6 +236,8 @@ class FVSLJ:
             thread = threading.Thread(target=self.stream_device, args=(name, serial))
             self.threads.append(thread)
             thread.start()
+        
+        self.start_animation()
 
         for thread in self.threads:
             thread.join()
@@ -286,7 +288,7 @@ def main():
     signal.signal(signal.SIGTERM, streamer.stop_scanning)
 
     streamer.run()
-   
+
     
 
 if __name__ == "__main__":
