@@ -47,8 +47,7 @@ class FVSLJ:
             ax.set_ylim(-1.5, 1.5)
         #start time
         self.start_time = time.time()
-        self.ani = animation.FuncAnimation(...)
-
+        
 
     def open_labjack(self, serial_number):
         handle = ljm.openS("ANY", "ANY", str(serial_number))
