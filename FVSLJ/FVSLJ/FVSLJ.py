@@ -32,6 +32,9 @@ class FVSLJ:
         self.output_directory = None
         self.start_event = threading.Event()  # Event to synchronize stream start
         self.fig,(self.ax_wheel, self.ax_light, self.ax_pulse)  = plt.subplots(3, 1)
+        self.ax_wheel.set_title("Wheel Data")
+        self.ax_light.set_title("Light Beam")
+        self.ax_pulse.set_title("Pulse Signal")
         self.xdata = []
         self.wheel = []
         self.pulse = []
@@ -39,9 +42,9 @@ class FVSLJ:
         self.wheel_data = []
         self.light_data = []
         self.pulse_data = []
-        self.ln_wheel, = self.ax_wheel.plot([] ,[], '-', animated=True, label='Wheel')
-        self.ln_pulse, = self.ax_pulse.plot([] ,[], '-', animated=True, label = 'Beam Break')
-        self.ln_light, = self.ax_light.plot([] ,[], '-', animated=True, label = 'Light')
+        self.ln_wheel, = self.ax_wheel.plot([] ,[], '-', animated=True)
+        self.ln_pulse, = self.ax_pulse.plot([] ,[], '-', animated=True)
+        self.ln_light, = self.ax_light.plot([] ,[], '-', animated=True)
         for ax in [self.ax_wheel, self.ax_light, self.ax_pulse]:
             ax.set_xlim(0, 10)
             ax.set_ylim(-1.5, 1.5)
@@ -265,7 +268,7 @@ class FVSLJ:
         
     def start_animation(self):
         print("Starting animation...")
-        self.ani = animation.FuncAnimation(self.fig, self.update_plot, frames=None, blit=True, interval=1000 // self.scanRate)
+        self.ani = animation.FuncAnimation(self.fig, self.update_plot, frames=None, blit=True, interval=1000 // self.scanRate, cache_frame_data=False)
         plt.tight_layout()
         plt.show()
         
