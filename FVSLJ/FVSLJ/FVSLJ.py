@@ -173,8 +173,8 @@ class FVSLJ:
             state = ljm.eReadName(handle, "FIO2")
             if state > 0.5:
                 print("High input detected on FIO2.")
-                self.start_event.set() 
-                self.start_animation() # Signal all threads to start
+                self.start_event.set() # Signal all threads to start
+                self.start_animation() 
                 break
             time.sleep(1)
 
@@ -264,10 +264,9 @@ class FVSLJ:
         
     def start_animation(self):
         print("Starting animation...")
-
         self.ani = animation.FuncAnimation(self.fig, self.update_plot, blit=True, interval=1000)
-    plt.tight_layout()
-    plt.show()
+        plt.tight_layout()
+        plt.show()
         
 def main():
     # Parse configurations to get the sample rate
