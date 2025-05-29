@@ -242,7 +242,7 @@ class FVSLJ:
         self.keep_scanning = False
         self.start_event.set()  # Ensure all threads are released
 
-    def update_plot(self, frame):
+    def update_plot(self, handle):
         self.ln_wheel.set_data(self.xdata, self.wheel_data)
         self.ln_light.set_data(self.xdata, self.light_data)
         self.ln_pulse.set_data(self.xdata, self.pulse_data)
