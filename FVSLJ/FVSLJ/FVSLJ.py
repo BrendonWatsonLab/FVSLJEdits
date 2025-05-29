@@ -192,7 +192,6 @@ class FVSLJ:
         print(f"\nConnecting to device {name} with serial number {serial}")
         handle, device_type = self.open_labjack(serial)
         try:
-            handle, device_type = self.open_labjack(serial)
             self.configure_stream(handle, device_type)
             self.start_event.wait()  # Wait for the signal to start
             self.start_stream(handle)
