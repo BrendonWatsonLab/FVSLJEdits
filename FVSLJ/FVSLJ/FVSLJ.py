@@ -31,6 +31,7 @@ class FVSLJ:
         self.controller_labjack = None
         self.output_directory = None
         self.start_event = threading.Event()  # Event to synchronize stream start
+        self.low_event = False
         self.fig,(self.ax_wheel, self.ax_light, self.ax_pulse)  = plt.subplots(3, 1)
         self.ax_wheel.set_title("Wheel Data")
         self.ax_light.set_title("Light Beam")
@@ -50,19 +51,17 @@ class FVSLJ:
             ax.set_ylim(-1.5, 1.5)
         #start time
         self.start_time = time.time()
-        
+
     #make code here to intialize graphs for all 4 labjacks 
     #def intialize_graphs(self):
-        
-
-
+  
     def open_labjack(self, serial_number):
         handle = ljm.openS("ANY", "ANY", str(serial_number))
         info = ljm.getHandleInfo(handle)
         device_type = info[0]
         print(f"Opened a LabJack with Device type: {info[0]}, Connection type: {info[1]},\n"
               f"Serial number: {info[2]}, IP address: {ljm.numberToIP(info[3])}, Port: {info[4]},\n"
-              f"Max bytes per MB: {info[5]}") 
+              f"Max bytes per MB: {info[5]}")
         return handle, device_type
 
     def configure_stream(self, handle, device_type):
@@ -120,26 +119,29 @@ class FVSLJ:
                     self.wheel = aData[i * len(self.aScanListNames) + self.aScanListNames.index("AIN0")]
                     self.pulse = aData[i * len(self.aScanListNames) + self.aScanListNames.index("FIO1")] > 0.5
                     self.light = aData[i * len(self.aScanListNames) + self.aScanListNames.index("FIO0")] > 0.5
-                    
-                    #change this to append data to each individual labjack
+
+                    #change to append data for every single labjack
                     current_time = time.time() - self.start_time
                     self.xdata.append(current_time)
                     self.wheel_data.append(self.wheel)
                     self.light_data.append(self.light)
                     self.pulse_data.append(self.pulse)
-                
-                    if len(self.xdata) > 50:  # Keep only last 50 points
+
+                    if len(self.xdata) > 50:
                         self.xdata.pop(0)
                         self.wheel_data.pop(0)
-                        self.light_data.pop(0)
                         self.pulse_data.pop(0)
-                
+                        self.light_data.pop(0)
+
                     data_record = DataRecord(timestamp, digitalStatus, lightStatus, self.wheel, self.pulse, self.light)
                     file.write(data_record.to_binary())
                     if i == 0:
                         print(data_record)
 
                     timestamp += increment
+
+                if self.low_event:
+                    break
 
             end = datetime.now()
             tt = (end - start).seconds + float((end - start).microseconds) / 1000000
@@ -149,7 +151,7 @@ class FVSLJ:
             print(f"Timed Scan Rate = {totScans / tt} scans/second")
             print(f"Timed Sample Rate = {totScans * len(self.aScanListNames) / tt} samples/second")
             print(f"Skipped scans = {totSkip / len(self.aScanListNames):.0f}")
-    
+
     def turn_light_on(self, handle):
         ljm.eWriteName(handle, "DIO17", 1)
         print("Light turned on")
@@ -171,6 +173,8 @@ class FVSLJ:
                         self.turn_light_off(handle)
                         light_state = False
             time.sleep(1)  # Check every second
+            if self.low_event:
+                break
 
     def wait_for_high_input(self, handle):
         print("Waiting for high input on FIO2...")
@@ -178,9 +182,13 @@ class FVSLJ:
             state = ljm.eReadName(handle, "FIO2")
             if 1:
                 print("High input detected on FIO2.")
-                self.start_event.set() # Signal all threads to start
-                self.start_animation() 
-                break
+                self.start_event.set()  # Signal all threads to start
+                self.start_animation()
+                self.low_event = False
+            else:
+                print("Low input detected on FIO2.")
+                self.start_event.clear()
+                self.low_event = True
             time.sleep(1)
 
     def stop_stream(self, handle):
@@ -209,8 +217,8 @@ class FVSLJ:
             light_thread = threading.Thread(target=self.light_control_thread, args=(handle, light_state))
             light_thread.start()
             self.threads.append(light_thread)
+
             self.perform_stream_reads(handle, device_type, name)
-            
         except ljm.LJMError as ljme:
             print(ljme)
         except Exception as e:
@@ -218,7 +226,7 @@ class FVSLJ:
         finally:
             if handle is not None:
                 self.stop_stream(handle)
-                self.close_labjack(handle)
+            #self.close_labjack(handle)
 
     def run(self):
         self.device_configurations = get_device_configurations("configurations.txt")
@@ -234,7 +242,7 @@ class FVSLJ:
         # Open the controller_labjack device and start the thread to wait for high input
         controller_handle, _ = self.open_labjack(self.device_configurations[self.controller_labjack])
         controller_thread = threading.Thread(target=self.wait_for_high_input, args=(controller_handle,))
-        self.threads.append(controller_thread)
+        #self.threads.append(controller_thread)
         controller_thread.start()
 
         # Start the other devices
@@ -242,20 +250,18 @@ class FVSLJ:
             thread = threading.Thread(target=self.stream_device, args=(name, serial))
             self.threads.append(thread)
             thread.start()
-        
-        self.start_animation()
 
+        print("BEFORE THREAD JOIN")
         for thread in self.threads:
             thread.join()
-
-        
+        print("AFTER THREAD JOIN")
+        return True
 
     def stop_scanning(self, signum, frame):
         print("\nInterrupt received, stopping scans...")
         self.keep_scanning = False
-        self.start_event.set() # Ensure all threads are released
-        self.start_animation()  
-
+        self.start_event.set()  # Ensure all threads are released
+    
     def update_plot(self, frames):
         print(f"Data lengths: x={len(self.xdata)}, wheel={len(self.wheel_data)}, light={len(self.light_data)}, pulse={len(self.pulse_data)}")
         if not self.xdata:
@@ -270,10 +276,10 @@ class FVSLJ:
             ax.set_xlim(max(0, current_time - 10), current_time)
         
         return self.ln_wheel, self.ln_light, self.ln_pulse
-
+    
     #this is just graphing an average of all of the signals
     #need to make it so it is graphing each labjack signal seperately
-    #total of 12 graphs
+    #total of 12 graph
     def start_animation(self):
         print("Starting animation...")
         self.ani = animation.FuncAnimation(self.fig, self.update_plot, frames=None, blit=True, interval=1000 // self.scanRate, cache_frame_data=False)
@@ -298,9 +304,16 @@ def main():
     signal.signal(signal.SIGINT, streamer.stop_scanning)
     signal.signal(signal.SIGTERM, streamer.stop_scanning)
 
-    streamer.run()
+    #keep_going = True
+    #while keep_going:
+        #keep_going = streamer.run()
+        #streamer.threads = []
+    data_thread = threading.Thread(target=streamer.run)
+    data_thread.start()
 
+    streamer.start_animation()
+
+    data_thread.join()
     
-
 if __name__ == "__main__":
     main()
