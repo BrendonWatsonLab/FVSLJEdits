@@ -183,7 +183,6 @@ class FVSLJ:
             if 1:
                 print("High input detected on FIO2.")
                 self.start_event.set()  # Signal all threads to start
-                self.start_animation()
                 self.low_event = False
             else:
                 print("Low input detected on FIO2.")
@@ -308,12 +307,13 @@ def main():
     #while keep_going:
         #keep_going = streamer.run()
         #streamer.threads = []
+    
     data_thread = threading.Thread(target=streamer.run)
     data_thread.start()
 
     streamer.start_animation()
 
     data_thread.join()
-    
+
 if __name__ == "__main__":
     main()
