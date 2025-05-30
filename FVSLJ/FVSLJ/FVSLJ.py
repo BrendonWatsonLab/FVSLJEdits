@@ -238,11 +238,11 @@ class FVSLJ:
             thread = threading.Thread(target=self.stream_device, args=(name, serial))
             self.threads.append(thread)
             thread.start()
-        
-        self.start_animation()
 
         for thread in self.threads:
             thread.join()
+            
+        self.start_animation()
 
     def stop_scanning(self, signum, frame):
         print("\nInterrupt received, stopping scans...")
@@ -265,7 +265,10 @@ class FVSLJ:
         print(len(self.xdata), len(self.wheel_data), len(self.light_data))
 
         return self.ln_wheel, self.ln_light, self.ln_pulse
-        
+
+    #this is just graphing an average of all of the signals
+    #need to make it so it is graphing each labjack signal seperately
+    #total of 12 graphs 
     def start_animation(self):
         print("Starting animation...")
         self.ani = animation.FuncAnimation(self.fig, self.update_plot, frames=None, blit=True, interval=1000 // self.scanRate, cache_frame_data=False)
