@@ -51,6 +51,10 @@ class FVSLJ:
         #start time
         self.start_time = time.time()
         
+    #make code here to intialize graphs for all 4 labjacks 
+    #def intialize_graphs(self):
+        
+
 
     def open_labjack(self, serial_number):
         handle = ljm.openS("ANY", "ANY", str(serial_number))
@@ -117,12 +121,12 @@ class FVSLJ:
                     self.pulse = aData[i * len(self.aScanListNames) + self.aScanListNames.index("FIO1")] > 0.5
                     self.light = aData[i * len(self.aScanListNames) + self.aScanListNames.index("FIO0")] > 0.5
                     
-                    #TODO I NEED TO ADD IN A VISUALIZATION PIECE OF CODE RIGHT ROUND YONDER!!
+                    #change this to append data to each individual labjack
                     current_time = time.time() - self.start_time
                     self.xdata.append(current_time)
                     self.wheel_data.append(self.wheel)
-                    self.light_data.append(self.pulse)
-                    self.pulse_data.append(self.light)
+                    self.light_data.append(self.light)
+                    self.pulse_data.append(self.pulse)
                 
                     if len(self.xdata) > 50:  # Keep only last 50 points
                         self.xdata.pop(0)
@@ -238,11 +242,13 @@ class FVSLJ:
             thread = threading.Thread(target=self.stream_device, args=(name, serial))
             self.threads.append(thread)
             thread.start()
+        
+        self.start_animation()
 
         for thread in self.threads:
             thread.join()
-            
-        self.start_animation()
+
+        
 
     def stop_scanning(self, signum, frame):
         print("\nInterrupt received, stopping scans...")
@@ -251,19 +257,18 @@ class FVSLJ:
         self.start_animation()  
 
     def update_plot(self, frames):
-        print(f"Data lengths: x={len(self.xdata)}, wheel={len(self.wheel_data)}, light={len(self.light_data)}, pulse={len(self.pulse_data)}")
+        #print(f"Data lengths: x={len(self.xdata)}, wheel={len(self.wheel_data)}, light={len(self.light_data)}, pulse={len(self.pulse_data)}")
         if not self.xdata:
             return self.ln_wheel, self.ln_light, self.ln_pulse
         self.ln_wheel.set_data(self.xdata, self.wheel_data)
         self.ln_light.set_data(self.xdata, self.light_data)
         self.ln_pulse.set_data(self.xdata, self.pulse_data)
 
+        #shifting x-axis
         current_time = self.xdata[-1]
         for ax in [self.ax_wheel, self.ax_light, self.ax_pulse]:
             ax.set_xlim(max(0, current_time - 10), current_time)
         
-        print(len(self.xdata), len(self.wheel_data), len(self.light_data))
-
         return self.ln_wheel, self.ln_light, self.ln_pulse
 
     #this is just graphing an average of all of the signals
