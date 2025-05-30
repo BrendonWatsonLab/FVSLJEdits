@@ -273,7 +273,7 @@ class FVSLJ:
 
     #this is just graphing an average of all of the signals
     #need to make it so it is graphing each labjack signal seperately
-    #total of 12 graph
+    #total of 12 graphs
     def start_animation(self):
         print("Starting animation...")
         self.ani = animation.FuncAnimation(self.fig, self.update_plot, frames=None, blit=True, interval=1000 // self.scanRate, cache_frame_data=False)
