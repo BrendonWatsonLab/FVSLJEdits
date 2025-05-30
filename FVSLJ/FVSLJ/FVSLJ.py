@@ -176,7 +176,7 @@ class FVSLJ:
         print("Waiting for high input on FIO2...")
         while self.keep_scanning:
             state = ljm.eReadName(handle, "FIO2")
-            if state > 0.5:
+            if 1:
                 print("High input detected on FIO2.")
                 self.start_event.set() # Signal all threads to start
                 self.start_animation() 
@@ -257,7 +257,7 @@ class FVSLJ:
         self.start_animation()  
 
     def update_plot(self, frames):
-        #print(f"Data lengths: x={len(self.xdata)}, wheel={len(self.wheel_data)}, light={len(self.light_data)}, pulse={len(self.pulse_data)}")
+        print(f"Data lengths: x={len(self.xdata)}, wheel={len(self.wheel_data)}, light={len(self.light_data)}, pulse={len(self.pulse_data)}")
         if not self.xdata:
             return self.ln_wheel, self.ln_light, self.ln_pulse
         self.ln_wheel.set_data(self.xdata, self.wheel_data)
