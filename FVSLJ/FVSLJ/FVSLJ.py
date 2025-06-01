@@ -127,7 +127,7 @@ class FVSLJ:
                     self.light_data.append(self.light)
                     self.pulse_data.append(self.pulse)
 
-                    if len(self.xdata) > 50:
+                    if len(self.xdata) > 100:
                         self.xdata.pop(0)
                         self.wheel_data.pop(0)
                         self.pulse_data.pop(0)
