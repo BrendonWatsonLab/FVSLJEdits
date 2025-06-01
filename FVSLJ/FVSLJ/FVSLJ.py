@@ -48,13 +48,13 @@ class FVSLJ:
         self.ln_light, = self.ax_light.plot([] ,[], '-', animated=True)
         for ax in [self.ax_wheel, self.ax_light, self.ax_pulse]:
             ax.set_xlim(0, 10)
-            ax.set_ylim(-1.5, 1.5)
+            ax.set_ylim(-100, 100)
         #start time
         self.start_time = time.time()
 
     #make code here to intialize graphs for all 4 labjacks 
     #def intialize_graphs(self):
-  
+    #create loops to make a graph for each one
     def open_labjack(self, serial_number):
         handle = ljm.openS("ANY", "ANY", str(serial_number))
         info = ljm.getHandleInfo(handle)
@@ -127,7 +127,7 @@ class FVSLJ:
                     self.light_data.append(self.light)
                     self.pulse_data.append(self.pulse)
 
-                    if len(self.xdata) > 100:
+                    if len(self.xdata) > 50:
                         self.xdata.pop(0)
                         self.wheel_data.pop(0)
                         self.pulse_data.pop(0)
