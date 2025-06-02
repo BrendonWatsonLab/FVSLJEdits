@@ -38,7 +38,7 @@ class FVSLJ:
         #start time
         self.start_time = time.time()
 
-    #make code here to intialize graphs for all 4 labjacks 
+    #make code here to initialize graphs for all 4 labjacks 
     def initialize_graphs(self):
         num_devices = len(self.device_configurations) 
         self.fig, self.axes = plt.subplots(num_devices, 3, figsize=(15, 3 * num_devices), sharex=True)
@@ -241,8 +241,6 @@ class FVSLJ:
         if not os.path.exists(self.output_directory):
             os.makedirs(self.output_directory)
         
-        self.initialize_graphs()
-
         # Open the controller_labjack device and start the thread to wait for high input
         controller_handle, _ = self.open_labjack(self.device_configurations[self.controller_labjack])
         controller_thread = threading.Thread(target=self.wait_for_high_input, args=(controller_handle,))
@@ -309,14 +307,14 @@ def main():
     # Set up signal handling to stop scanning on interrupt
     signal.signal(signal.SIGINT, streamer.stop_scanning)
     signal.signal(signal.SIGTERM, streamer.stop_scanning)
-
-    #keep_going = True
-    #while keep_going:
-        #keep_going = streamer.run()
-        #streamer.threads = []
+    
+    streamer.device_configurations = get_device_configurations("configurations.txt")
+    streamer.initialize_graphs()
     
     data_thread = threading.Thread(target=streamer.run)
     data_thread.start()
+
+    streamer.start_event.wait()
 
     streamer.start_animation()
 
