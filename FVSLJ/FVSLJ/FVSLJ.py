@@ -39,7 +39,7 @@ class FVSLJ:
         self.start_time = time.time()
 
     #make code here to intialize graphs for all 4 labjacks 
-    def intialize_graphs(self):
+    def initialize_graphs(self):
         num_devices = len(self.device_configurations) 
         self.fig, self.axes = plt.subplots(num_devices, 3, figsize=(15, 3 * num_devices), sharex=True)
         for i, (device_name, _) in enumerate (self.device_configurations.items()):     
@@ -135,6 +135,7 @@ class FVSLJ:
 
                     data_record = DataRecord(timestamp, digitalStatus, self.lightStatus, self.wheel, self.pulse, light)
                     file.write(data_record.to_binary())
+                   
                     if i == 0:
                         print(data_record)
 
@@ -239,6 +240,8 @@ class FVSLJ:
         # Ensure the output directory exists
         if not os.path.exists(self.output_directory):
             os.makedirs(self.output_directory)
+        
+        self.initialize_graphs()
 
         # Open the controller_labjack device and start the thread to wait for high input
         controller_handle, _ = self.open_labjack(self.device_configurations[self.controller_labjack])
