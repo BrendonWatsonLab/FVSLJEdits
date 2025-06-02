@@ -122,10 +122,10 @@ class FVSLJ:
                 totSkip += curSkip
 
                 for i in range(int(scans)):
-                    digitalStatus = int(''.join(['1' if aData[i * len(self.aScanListNames) + self.aScanListNames.index(f"EIO{j}")] > 0.5 else '0' for j in range(8)]), 2)
+                    self.digitalStatus = int(''.join(['1' if aData[i * len(self.aScanListNames) + self.aScanListNames.index(f"EIO{j}")] > 0.5 else '0' for j in range(8)]), 2)
                     self.lightStatus = aData[i * len(self.aScanListNames) + self.aScanListNames.index("AIN1")] > 0.5
                     self.wheel = aData[i * len(self.aScanListNames) + self.aScanListNames.index("AIN0")]
-                    self.pulse = aData[i * len(self.aScanListNames) + self.aScanListNames.index("FIO1")] > 0.5
+                    pulse = aData[i * len(self.aScanListNames) + self.aScanListNames.index("FIO1")] > 0.5
                     light = aData[i * len(self.aScanListNames) + self.aScanListNames.index("FIO0")] > 0.5
 
                     #change to append data for every single labjack
@@ -140,7 +140,7 @@ class FVSLJ:
                         for key in ['x', 'Wheel', 'Light', 'Beam Break']:
                             signals[key].pop(0)
 
-                    data_record = DataRecord(timestamp, digitalStatus, self.lightStatus, self.wheel, self.pulse, light)
+                    data_record = DataRecord(timestamp, self.digitalStatus, self.lightStatus, self.wheel, pulse, light)
                     file.write(data_record.to_binary())
                    
                     if i == 0:
@@ -287,6 +287,9 @@ class FVSLJ:
                 i = list(self.device_configurations.keys()).index(device_name)
                 j = self.signals.index(signal_name)
                 ax = self.axes[i][j]
+                
+                ax.relim() #making sure x-axis is dynamically moving 
+                ax.autoscale_view()
                 ax.set_xlim(max(0, current_time - 10), current_time)
 
         return [line for dev in self.device_lines.values() for line in dev.values()]
