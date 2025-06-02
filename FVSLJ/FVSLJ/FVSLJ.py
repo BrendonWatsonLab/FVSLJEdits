@@ -56,8 +56,10 @@ class FVSLJ:
                     ax.set_ylim(0, 2)
                 elif signal == 'Beam Break':
                     ax.set_ylim(0, 255)
+
+                ax.tick_params(labelbottom=True) #forcing x-axis at bottom of each graph
+
                 line, = ax.plot([], [], '-', label=signal)
-                ax.legend()
                 self.device_lines[device_name][signal] = line
         
 
