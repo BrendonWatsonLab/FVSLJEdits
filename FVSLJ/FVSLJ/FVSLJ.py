@@ -53,9 +53,9 @@ class FVSLJ:
                 if signal == 'Wheel':
                     ax.set_ylim(-20, 20)
                 elif signal == 'Light':
-                    ax.set_ylim(0, 2)
+                    ax.set_ylim(-2, 2)
                 elif signal == 'Beam Break':
-                    ax.set_ylim(0, 260)
+                    ax.set_ylim(-5, 280)
 
                 ax.tick_params(labelbottom=True) #forcing x-axis at bottom of each graph
 
