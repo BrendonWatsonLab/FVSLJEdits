@@ -129,7 +129,7 @@ class FVSLJ:
                     signals['Light'].append(self.lightStatus)
                     signals['Beam Break'].append(self.pulse)
 
-                    if len(signals['x']) > 100:
+                    if len(signals['x']) > 1000:
                         for key in ['x', 'Wheel', 'Light', 'Beam Break']:
                             signals[key].pop(0)
 
