@@ -134,7 +134,7 @@ class FVSLJ:
                     signals['x'].append(current_time)
                     signals['Wheel'].append(self.wheel)
                     signals['Light'].append(self.lightStatus)
-                    signals['Beam Break'].append(self.pulse)
+                    signals['Beam Break'].append(self.digitalStatus)
 
                     if len(signals['x']) > 1000:
                         for key in ['x', 'Wheel', 'Light', 'Beam Break']:
