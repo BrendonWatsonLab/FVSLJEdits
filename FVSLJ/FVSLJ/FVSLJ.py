@@ -53,7 +53,7 @@ class FVSLJ:
                 if signal == 'Wheel':
                     ax.set_ylim(-20, 20)
                 elif signal == 'Light':
-                    ax.set_ylim(-2, 2)
+                    ax.set_ylim(-.5, 2)
                 elif signal == 'Beam Break':
                     ax.set_ylim(-5, 280)
 
