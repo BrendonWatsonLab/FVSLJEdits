@@ -50,7 +50,12 @@ class FVSLJ:
                 ax = self.axes[i][j]
                 ax.set_title(f"{signal} - {device_name}")
                 ax.set_xlim(0, 10)
-                ax.set_ylim(-100, 100)
+                if signal == 'Wheel':
+                    ax.set_ylim(-20, 20)
+                elif signal == 'Light':
+                    ax.set_ylim(0, 2)
+                elif signal == 'Beam Break':
+                    ax.set_ylim(0, 255)
                 line, = ax.plot([], [], '-', label=signal)
                 ax.legend()
                 self.device_lines[device_name][signal] = line
