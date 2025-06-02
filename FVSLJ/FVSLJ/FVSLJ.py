@@ -32,29 +32,30 @@ class FVSLJ:
         self.output_directory = None
         self.start_event = threading.Event()  # Event to synchronize stream start
         self.low_event = False
-        self.fig,(self.ax_wheel, self.ax_light, self.ax_pulse)  = plt.subplots(3, 1)
-        self.ax_wheel.set_title("Wheel Data")
-        self.ax_light.set_title("Light Beam")
-        self.ax_pulse.set_title("Pulse Signal")
-        self.xdata = []
-        self.wheel = []
-        self.pulse = []
-        self.light = []
-        self.wheel_data = []
-        self.light_data = []
-        self.pulse_data = []
-        self.ln_wheel, = self.ax_wheel.plot([] ,[], '-', animated=True)
-        self.ln_pulse, = self.ax_pulse.plot([] ,[], '-', animated=True)
-        self.ln_light, = self.ax_light.plot([] ,[], '-', animated=True)
-        for ax in [self.ax_wheel, self.ax_light, self.ax_pulse]:
-            ax.set_xlim(0, 10)
-            ax.set_ylim(-100, 100)
+        self.device_data = {}
+        self.device_lines = {}
+        self.signals = ['Wheel', 'Light', 'Beam Break']
         #start time
         self.start_time = time.time()
 
     #make code here to intialize graphs for all 4 labjacks 
-    #def intialize_graphs(self):
-    #create loops to make a graph for each one
+    def intialize_graphs(self):
+        num_devices = len(self.device_configurations) 
+        self.fig, self.axes = plt.subplots(num_devices, 3, figsize=(15, 3 * num_devices), sharex=True)
+        for i, (device_name, _) in enumerate (self.device_configurations.items()):     
+            self.device_lines[device_name] = {}
+            self.device_data[device_name] = {'x': [], 'Wheel': [], 'Light': [], 'Beam Break': []}  
+
+            for j, signal in enumerate(self.signals):
+                ax = self.axes[i][j]
+                ax.set_title(f"{signal} - {device_name}")
+                ax.set_xlim(0, 10)
+                ax.set_ylim(-100, 100)
+                line, = ax.plot([], [], '-', label=signal)
+                ax.legend()
+                self.device_lines[device_name][signal] = line
+        
+
     def open_labjack(self, serial_number):
         handle = ljm.openS("ANY", "ANY", str(serial_number))
         info = ljm.getHandleInfo(handle)
@@ -115,25 +116,24 @@ class FVSLJ:
 
                 for i in range(int(scans)):
                     digitalStatus = int(''.join(['1' if aData[i * len(self.aScanListNames) + self.aScanListNames.index(f"EIO{j}")] > 0.5 else '0' for j in range(8)]), 2)
-                    lightStatus = aData[i * len(self.aScanListNames) + self.aScanListNames.index("AIN1")] > 0.5
+                    self.lightStatus = aData[i * len(self.aScanListNames) + self.aScanListNames.index("AIN1")] > 0.5
                     self.wheel = aData[i * len(self.aScanListNames) + self.aScanListNames.index("AIN0")]
                     self.pulse = aData[i * len(self.aScanListNames) + self.aScanListNames.index("FIO1")] > 0.5
-                    self.light = aData[i * len(self.aScanListNames) + self.aScanListNames.index("FIO0")] > 0.5
+                    light = aData[i * len(self.aScanListNames) + self.aScanListNames.index("FIO0")] > 0.5
 
                     #change to append data for every single labjack
                     current_time = time.time() - self.start_time
-                    self.xdata.append(current_time)
-                    self.wheel_data.append(self.wheel)
-                    self.light_data.append(self.light)
-                    self.pulse_data.append(self.pulse)
+                    signals = self.device_data[device_name]
+                    signals['x'].append(current_time)
+                    signals['Wheel'].append(self.wheel)
+                    signals['Light'].append(self.lightStatus)
+                    signals['Beam Break'].append(self.pulse)
 
-                    if len(self.xdata) > 100:
-                        self.xdata.pop(0)
-                        self.wheel_data.pop(0)
-                        self.pulse_data.pop(0)
-                        self.light_data.pop(0)
+                    if len(signals['x']) > 100:
+                        for key in ['x', 'Wheel', 'Light', 'Beam Break']:
+                            signals[key].pop(0)
 
-                    data_record = DataRecord(timestamp, digitalStatus, lightStatus, self.wheel, self.pulse, self.light)
+                    data_record = DataRecord(timestamp, digitalStatus, self.lightStatus, self.wheel, self.pulse, light)
                     file.write(data_record.to_binary())
                     if i == 0:
                         print(data_record)
@@ -151,7 +151,8 @@ class FVSLJ:
             print(f"Timed Scan Rate = {totScans / tt} scans/second")
             print(f"Timed Sample Rate = {totScans * len(self.aScanListNames) / tt} samples/second")
             print(f"Skipped scans = {totSkip / len(self.aScanListNames):.0f}")
-
+            
+        
     def turn_light_on(self, handle):
         ljm.eWriteName(handle, "DIO17", 1)
         print("Light turned on")
@@ -166,7 +167,7 @@ class FVSLJ:
             if self.light_control == 1 and self.light_time_on is not None and self.light_time_off is not None:
                 if self.light_time_on <= current_time < self.light_time_off:
                     if light_state != True:
-                        self.turn_light_on(handle)
+                        self.turn_light_on(handle) 
                         light_state = True
                 else:
                     if light_state != False:
@@ -218,6 +219,7 @@ class FVSLJ:
             self.threads.append(light_thread)
 
             self.perform_stream_reads(handle, device_type, name)
+
         except ljm.LJMError as ljme:
             print(ljme)
         except Exception as e:
@@ -262,23 +264,25 @@ class FVSLJ:
         self.start_event.set()  # Ensure all threads are released
     
     def update_plot(self, frames):
-        print(f"Data lengths: x={len(self.xdata)}, wheel={len(self.wheel_data)}, light={len(self.light_data)}, pulse={len(self.pulse_data)}")
-        if not self.xdata:
-            return self.ln_wheel, self.ln_light, self.ln_pulse
-        self.ln_wheel.set_data(self.xdata, self.wheel_data)
-        self.ln_light.set_data(self.xdata, self.light_data)
-        self.ln_pulse.set_data(self.xdata, self.pulse_data)
+        for device_name, signals in self.device_data.items():
+            xdata = signals['x']
+            if not xdata:
+                continue
 
-        #shifting x-axis
-        current_time = self.xdata[-1]
-        for ax in [self.ax_wheel, self.ax_light, self.ax_pulse]:
-            ax.set_xlim(max(0, current_time - 10), current_time)
-        
-        return self.ln_wheel, self.ln_light, self.ln_pulse
+            current_time = xdata[-1]
+
+            for signal_name in self.signals:
+                ydata = signals[signal_name]
+                line = self.device_lines[device_name][signal_name]
+                line.set_data(xdata, ydata)
+
+                i = list(self.device_configurations.keys()).index(device_name)
+                j = self.signals.index(signal_name)
+                ax = self.axes[i][j]
+                ax.set_xlim(max(0, current_time - 10), current_time)
+
+        return [line for dev in self.device_lines.values() for line in dev.values()]
     
-    #this is just graphing an average of all of the signals
-    #need to make it so it is graphing each labjack signal seperately
-    #total of 12 graph
     def start_animation(self):
         print("Starting animation...")
         self.ani = animation.FuncAnimation(self.fig, self.update_plot, frames=None, blit=True, interval=1000 // self.scanRate, cache_frame_data=False)
