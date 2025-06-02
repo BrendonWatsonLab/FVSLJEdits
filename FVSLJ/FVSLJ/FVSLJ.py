@@ -56,7 +56,8 @@ class FVSLJ:
                     ax.set_ylim(-.5, 2)
                 elif signal == 'Beam Break':
                     ax.set_ylim(-5, 280)
-
+                    ax.set_yticks(np.linspace(0, 280, 9))
+                    
                 ax.tick_params(labelbottom=True) #forcing x-axis at bottom of each graph
 
                 line, = ax.plot([], [], '-', label=signal)
@@ -297,7 +298,6 @@ class FVSLJ:
     def start_animation(self):
         print("Starting animation...")
         self.ani = animation.FuncAnimation(self.fig, self.update_plot, frames=None, blit=False, interval=1000 // self.scanRate, cache_frame_data=False)
-        plt.tight_layout()
         plt.tight_layout(pad=3.0)
         plt.show()
         
