@@ -35,7 +35,6 @@ class FVSLJ:
         self.device_data = {}
         self.device_lines = {}
         self.signals = ['Wheel', 'Light', 'Beam Break']
-        #start time
         self.start_time = time.time()
 
     #make code here to initialize graphs for all 4 labjacks 
@@ -56,7 +55,7 @@ class FVSLJ:
                     ax.set_ylim(-.5, 2)
                 elif signal == 'Beam Break':
                     ax.set_ylim(-5, 280)
-                    ax.set_yticks(np.linspace(0, 280, 9))
+                    ax.set_yticks(np.linspace(0, 280, 8))
                     
                 ax.tick_params(labelbottom=True) #forcing x-axis at bottom of each graph
 
@@ -190,7 +189,7 @@ class FVSLJ:
         print("Waiting for high input on FIO2...")
         while self.keep_scanning:
             state = ljm.eReadName(handle, "FIO2")
-            if 1:
+            if state > 0.5:
                 print("High input detected on FIO2.")
                 self.start_event.set()  # Signal all threads to start
                 self.low_event = False
