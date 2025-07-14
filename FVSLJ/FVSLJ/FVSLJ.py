@@ -294,11 +294,18 @@ class FVSLJ:
 
         return [line for dev in self.device_lines.values() for line in dev.values()]
     
-    def start_animation(self):
-        print("Starting animation...")
-        self.ani = animation.FuncAnimation(self.fig, self.update_plot, frames=None, blit=False, interval=1000 // self.scanRate, cache_frame_data=False)
-        plt.tight_layout(pad=3.0)
-        plt.show()
+    def start_animation(self, handle):
+        while self.keep_scanning:
+            state = ljm.eReadName(handle, "FIO2")
+            if state > 0.5:
+                print("Starting animation...")
+                self.ani = animation.FuncAnimation(self.fig, self.update_plot, frames=None, blit=False, interval=1000 // self.scanRate, cache_frame_data=False)
+                plt.tight_layout(pad=3.0)
+                plt.show()
+            else:
+                print("Low input for Animation")
+            time.sleep(1)
+        
         
 def main():
     # Parse configurations to get the sample rate
