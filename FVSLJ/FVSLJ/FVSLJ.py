@@ -294,17 +294,25 @@ class FVSLJ:
 
         return [line for dev in self.device_lines.values() for line in dev.values()]
     
-    def start_animation(self, handle):
+    def wait_for_high_input_animation(self, handle):
+        print("Waiting for high input to start animation...")
         while self.keep_scanning:
             state = ljm.eReadName(handle, "FIO2")
             if state > 0.5:
-                print("Starting animation...")
-                self.ani = animation.FuncAnimation(self.fig, self.update_plot, frames=None, blit=False, interval=1000 // self.scanRate, cache_frame_data=False)
-                plt.tight_layout(pad=3.0)
-                plt.show()
+                print("High input detected. Starting animation...")
             else:
-                print("Low input for Animation")
+                "Low input no animation"
             time.sleep(1)
+
+    def start_animation(self, handle):
+        self.wait_for_high_input(handle)
+        
+        print("Starting animation...")
+        self.ani = animation.FuncAnimation(self.fig, self.update_plot, frames=None, blit=False, interval=1000 // self.scanRate, cache_frame_data=False)
+        plt.tight_layout(pad=3.0)
+        plt.show()
+          
+
         
         
 def main():
@@ -325,6 +333,9 @@ def main():
     signal.signal(signal.SIGINT, streamer.stop_scanning)
     signal.signal(signal.SIGTERM, streamer.stop_scanning)
     
+    #defining handle and getting the serial number for the configuration file
+    first_serial_number = list(streamer.device_configurations.keys())[0]
+    handle, _ = streamer.open_labjack(first_serial_number)
     streamer.device_configurations = get_device_configurations("configurations.txt")
     streamer.initialize_graphs()
     
@@ -333,7 +344,7 @@ def main():
 
     streamer.start_event.wait()
 
-    streamer.start_animation()
+    streamer.start_animation(handle)
 
     data_thread.join()
 
