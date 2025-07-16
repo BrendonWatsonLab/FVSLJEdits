@@ -36,9 +36,6 @@ class FVSLJ:
         self.device_lines = {}
         self.signals = ['Wheel', 'Light', 'Beam Break']
         self.start_time = time.time()
-        self.axes = None
-        self.fig = None
-        self.ani = None 
 
     #make code here to initialize graphs for all 4 labjacks 
     def initialize_graphs(self):
@@ -273,9 +270,6 @@ class FVSLJ:
         print("\nInterrupt received, stopping scans...")
         self.keep_scanning = False
         self.start_event.set()  # Ensure all threads are released
-        if self.ani is not None: #stopping the animation 
-            self.ani.event_source.stop()
-        plt.close('all')
     
     def update_plot(self, frames):
         for device_name, signals in self.device_data.items():
@@ -300,19 +294,15 @@ class FVSLJ:
 
         return [line for dev in self.device_lines.values() for line in dev.values()]
     
-
-    def start_animation(self, handle):
-        # Wait for high input before starting animation
-        if not self.wait_for_high_input(handle):
+    def start_animation(self):
+        if self.low_event:
+            print("Low event detected - skipping animation start")
             return
-        
+
         print("Starting animation...")
         self.ani = animation.FuncAnimation(self.fig, self.update_plot, frames=None, blit=False, interval=1000 // self.scanRate, cache_frame_data=False)
         plt.tight_layout(pad=3.0)
-        threading.Thread(target=plt.show, daemon=True).start()  # Non-blocking
-          
-
-        
+        plt.show()
         
 def main():
     # Parse configurations to get the sample rate
@@ -333,22 +323,16 @@ def main():
     signal.signal(signal.SIGTERM, streamer.stop_scanning)
     
     streamer.device_configurations = get_device_configurations("configurations.txt")
-    streamer.initialize_graphs() 
-     # Get the handle for the controller labjack
-    controller_handle, _ = streamer.open_labjack(streamer.device_configurations[streamer.controller_labjack])
-   
-    # Start data collection in a separate thread
+    streamer.initialize_graphs()
+    
     data_thread = threading.Thread(target=streamer.run)
     data_thread.start()
-    
-    streamer.start_event.wait()
-    
-    # Start animation 
-    streamer.start_animation(controller_handle)
 
-    # Clean up
+    streamer.start_event.wait()
+
+    streamer.start_animation()
+
     data_thread.join()
-    streamer.close_labjack(controller_handle)
 
 if __name__ == "__main__":
     main()
