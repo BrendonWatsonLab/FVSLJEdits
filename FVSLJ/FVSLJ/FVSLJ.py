@@ -341,7 +341,9 @@ def main():
     data_thread = threading.Thread(target=streamer.run)
     data_thread.start()
     
-    # Start animation (will wait for high input internally)
+    streamer.start_event.wait()
+    
+    # Start animation 
     streamer.start_animation(controller_handle)
 
     # Clean up
