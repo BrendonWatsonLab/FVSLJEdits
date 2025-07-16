@@ -309,7 +309,7 @@ class FVSLJ:
         print("Starting animation...")
         self.ani = animation.FuncAnimation(self.fig, self.update_plot, frames=None, blit=False, interval=1000 // self.scanRate, cache_frame_data=False)
         plt.tight_layout(pad=3.0)
-        plt.show()
+        threading.Thread(target=plt.show, daemon=True).start()  # Non-blocking
           
 
         
@@ -332,13 +332,15 @@ def main():
     signal.signal(signal.SIGINT, streamer.stop_scanning)
     signal.signal(signal.SIGTERM, streamer.stop_scanning)
     
+    streamer.device_configurations = get_device_configurations("configurations.txt")
+    streamer.initialize_graphs() 
      # Get the handle for the controller labjack
-    controller_handle, = streamer.open_labjack(streamer.device_configurations[streamer.controller_labjack])
-    
+    controller_handle, _ = streamer.open_labjack(streamer.device_configurations[streamer.controller_labjack])
+   
     # Start data collection in a separate thread
     data_thread = threading.Thread(target=streamer.run)
     data_thread.start()
-
+    
     # Start animation (will wait for high input internally)
     streamer.start_animation(controller_handle)
 
