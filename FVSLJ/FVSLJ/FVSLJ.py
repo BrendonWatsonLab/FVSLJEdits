@@ -333,7 +333,7 @@ def main():
     signal.signal(signal.SIGTERM, streamer.stop_scanning)
     
      # Get the handle for the controller labjack
-    controller_handle = streamer.open_labjack(streamer.device_configurations[streamer.controller_labjack])
+    controller_handle, = streamer.open_labjack(streamer.device_configurations[streamer.controller_labjack])
     
     # Start data collection in a separate thread
     data_thread = threading.Thread(target=streamer.run)
