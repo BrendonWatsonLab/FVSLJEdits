@@ -295,14 +295,14 @@ class FVSLJ:
         return [line for dev in self.device_lines.values() for line in dev.values()]
     
     def start_animation(self):
-        if self.low_event:
+        if not self.low_event:
             print("Low event detected - skipping animation start")
             return
 
         print("Starting animation...")
         self.ani = animation.FuncAnimation(self.fig, self.update_plot, frames=None, blit=False, interval=1000 // self.scanRate, cache_frame_data=False)
         plt.tight_layout(pad=3.0)
-        plt.show()
+        plt.show() 
         
 def main():
     # Parse configurations to get the sample rate
