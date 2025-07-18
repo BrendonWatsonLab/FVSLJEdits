@@ -326,13 +326,13 @@ def main():
     
     streamer.device_configurations = get_device_configurations("configurations.txt")
     streamer.initialize_graphs()
-    
-    data_thread = threading.Thread(target=streamer.run)
-    data_thread.start()
-
-    streamer.start_event.wait()
-
-    streamer.start_animation()
+   
+    keep_going = True
+    while keep_going:
+        data_thread = threading.Thread(target=streamer.run)
+        data_thread.start()
+        streamer.start_event.wait()
+        streamer.start_animation()
 
     #data_thread.join()
 
