@@ -334,7 +334,7 @@ def main():
 
     streamer.start_animation()
 
-    data_thread.join()
+    #data_thread.join()
 
 if __name__ == "__main__":
     main()
