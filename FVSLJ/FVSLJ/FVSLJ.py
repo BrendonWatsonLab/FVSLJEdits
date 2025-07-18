@@ -296,8 +296,8 @@ class FVSLJ:
     
     def start_animation(self):
         while self.keep_scanning:   
-            if not self.low_event:
-                print("Low event detected - skipping animation start")
+            if self.low_event:
+                print("\nLow event detected - skipping animation start")
                 return
             else:
                 print("Starting animation...")
