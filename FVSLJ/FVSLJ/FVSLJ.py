@@ -304,7 +304,7 @@ class FVSLJ:
                 self.ani = animation.FuncAnimation(self.fig, self.update_plot, frames=None, blit=False, interval=1000 // self.scanRate, cache_frame_data=False)
                 plt.tight_layout(pad=3.0)
                 plt.show()
-            time.sleep(1) 
+            
         
 def main():
     # Parse configurations to get the sample rate
