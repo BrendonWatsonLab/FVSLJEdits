@@ -197,7 +197,7 @@ class FVSLJ:
                 print("Low input detected on FIO2.")
                 self.start_event.clear()
                 self.low_event = True
-        time.sleep(1)
+            time.sleep(1)
 
     def stop_stream(self, handle):
         try:
@@ -305,7 +305,10 @@ class FVSLJ:
                 plt.tight_layout(pad=3.0)
                 plt.show()
             time.sleep(1)
-        
+    def getter(self):
+        return self.keep_scanning
+
+
 def main():
     # Parse configurations to get the sample rate
     _, _, _, _, _, samples_per_second = parse_aux_configurations("configurations.txt")
@@ -329,7 +332,7 @@ def main():
    
     keep_going = True
     while keep_going:
-        keep_going = streamer.keep_scanning()
+        keep_going = streamer.getter()
         data_thread = threading.Thread(target=streamer.run)
         data_thread.start()
         streamer.start_event.wait()
