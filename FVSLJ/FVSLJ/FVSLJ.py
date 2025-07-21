@@ -197,7 +197,7 @@ class FVSLJ:
                 print("Low input detected on FIO2.")
                 self.start_event.clear()
                 self.low_event = True
-            time.sleep(1)
+        time.sleep(1)
 
     def stop_stream(self, handle):
         try:
@@ -329,13 +329,14 @@ def main():
    
     keep_going = True
     while keep_going:
-        keep_going = streamer.run()
+        keep_going = streamer.keep_scanning()
         data_thread = threading.Thread(target=streamer.run)
         data_thread.start()
         streamer.start_event.wait()
         streamer.start_animation()
+        data_thread.join()
+        streamer.threads = []
 
-    #data_thread.join()
 
 if __name__ == "__main__":
     main()
