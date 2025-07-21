@@ -332,7 +332,6 @@ def main():
    
     keep_going = True
     while keep_going:
-        keep_going = streamer.getter()
         data_thread = threading.Thread(target=streamer.run)
         data_thread.start()
         streamer.start_event.wait()
