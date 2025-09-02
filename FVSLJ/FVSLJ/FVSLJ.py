@@ -185,19 +185,44 @@ class FVSLJ:
             if self.low_event:
                 break
 
-    def wait_for_high_input(self, handle):
-        print("Waiting for high input on FIO2...")
-        while self.keep_scanning:
-            state = ljm.eReadName(handle, "FIO2")
-            if state > 0.5:
-                print("High input detected on FIO2.")
-                self.start_event.set()  # Signal all threads to start
-                self.low_event = False
-            else:
-                print("Low input detected on FIO2.")
-                self.start_event.clear()
-                self.low_event = True
-            time.sleep(1)
+    def wait_for_high_input(self, handle, dio_pin="FIO2", threshold=0.5, poll_interval=0.1):
+        """Continuously monitor input pin and pause/resume data collection."""
+        while True:
+            try:
+                state = ljm.eReadName(handle, dio_pin)
+
+                if state > threshold and not self.keep_scanning:
+                    print("High input detected → resuming data collection")
+                    self.keep_scanning = True
+                    self.start_event.set()
+
+                elif state <= threshold and self.keep_scanning:
+                    print("Low input detected → pausing data collection")
+                    self.keep_scanning = False
+                    self.start_event.clear()
+
+                time.sleep(poll_interval)
+
+            except Exception as e:
+                print(f"Error monitoring input: {e}")
+                time.sleep(1)
+
+
+    
+    
+    #def wait_for_high_input(self, handle):
+        #print("Waiting for high input on FIO2...")
+        #while self.keep_scanning:
+            #state = ljm.eReadName(handle, "FIO2")
+            #if state > 0.5:
+                #print("High input detected on FIO2.")
+                #self.start_event.set()  # Signal all threads to start
+                #self.low_event = False
+            #else:
+                #print("Low input detected on FIO2.")
+                #self.start_event.clear()
+                #self.low_event = True
+            #time.sleep(1)
 
     def stop_stream(self, handle):
         try:
@@ -329,16 +354,41 @@ def main():
     
     streamer.device_configurations = get_device_configurations("configurations.txt")
     streamer.initialize_graphs()
-   
-    keep_going = True
-    while keep_going:
-        streamer.start_event.clear()
-        data_thread = threading.Thread(target=streamer.run)
-        data_thread.start()
-        streamer.start_event.wait()
-        streamer.start_animation()
-        data_thread.join()
-        streamer.threads = []
+    
+    # Start the data collection thread
+    data_thread = threading.Thread(target=streamer.run)
+    data_thread.start()
+
+    # Wait until streamer is ready
+    streamer.start_event.wait()
+
+    # Start the animation (this already runs in its own thread internally)
+    streamer.start_animation()
+
+    # --- NEW: start input monitoring thread ---
+    first_device = next(iter(streamer.device_configurations.values()))
+    handle = first_device["handle"]
+
+    monitor_thread = threading.Thread(
+        target=streamer.wait_for_high_input,
+        args=(handle,),   # pass handle from config
+        daemon=True
+    )
+    monitor_thread.start()
+    # -----------------------------------------
+
+    # Block until data thread finishes (should run indefinitely unless stopped)
+    data_thread.join()
+    
+    #keep_going = True
+    #while keep_going:
+        #streamer.start_event.clear()
+        #data_thread = threading.Thread(target=streamer.run)
+        #data_thread.start()
+        #streamer.start_event.wait()
+        #streamer.start_animation()
+        #data_thread.join()
+        #streamer.threads = []
 
 
 if __name__ == "__main__":
