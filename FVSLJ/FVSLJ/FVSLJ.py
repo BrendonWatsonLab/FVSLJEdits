@@ -195,14 +195,14 @@ class FVSLJ:
                 current_time = datetime.now().strftime("%H:%M:%S")
             
                 if state > threshold:
-                    print(f"[{current_time}] High input detected on {dio_pin}: {state:.2f}V")
+                    print(f"High input detected on FIO2.")
                     if not self.keep_scanning:
                         print("Resuming data collection")
                         self.keep_scanning = True
                         self.start_event.set()
                         self.low_event = False
                 else:
-                    print(f"[{current_time}] Low input detected on {dio_pin}: {state:.2f}V")
+                    print(f"Low input detected on FIO2.")
                     if self.keep_scanning:
                         print("Pausing data collection")
                         self.keep_scanning = False
@@ -363,26 +363,21 @@ class FVSLJ:
                 i = list(self.device_configurations.keys()).index(device_name)
                 j = self.signals.index(signal_name)
                 ax = self.axes[i][j]
-                
-                ax.relim() #making sure x-axis is dynamically moving 
-                ax.autoscale_view()
-                ax.set_xlim(max(0, current_time - 10), current_time)
+            
+                # Only update limits if we have data
+                if xdata:
+                    ax.set_xlim(max(0, current_time - 10), current_time)
+                    ax.relim()
+                    ax.autoscale_view()
 
         return [line for dev in self.device_lines.values() for line in dev.values()]
     
     def start_animation(self):
-        while self.keep_scanning:   
-            if self.low_event:
-                print("\nLow event detected - skipping animation start")
-                return
-            else:
-                print("Starting animation...")
-                self.ani = animation.FuncAnimation(self.fig, self.update_plot, frames=None, blit=False, interval=1000 // self.scanRate, cache_frame_data=False)
-                plt.tight_layout(pad=3.0)
-                plt.show()
-            time.sleep(1)
-    def getter(self):
-        return self.keep_scanning
+        if self.low_event:
+            print("\nLow event detected - skipping animation start")
+        return
+        
+    print("Animation ready to start")
 
 
 def main():
@@ -404,6 +399,8 @@ def main():
     signal.signal(signal.SIGTERM, streamer.stop_scanning)
     
     streamer.device_configurations = get_device_configurations("configurations.txt")
+   
+   # Initialize graphs once
     streamer.initialize_graphs()
     
     # Start the data collection thread
@@ -411,26 +408,24 @@ def main():
     data_thread.daemon = True
     data_thread.start()
 
-    # Start the animation
-    streamer.initialize_graphs()
-    streamer.start_animation()
-
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        streamer.stop_scanning(None, None)
+    # Wait a moment for data to start flowing before animation
+    time.sleep(0.5)
     
-    #keep_going = True
-    #while keep_going:
-        #streamer.start_event.clear()
-        #data_thread = threading.Thread(target=streamer.run)
-        #data_thread.start()
-        #streamer.start_event.wait()
-        #streamer.start_animation()
-        #data_thread.join()
-        #streamer.threads = []
+    # Start the animation in the main thread
+    print("Starting animation...")
+    streamer.ani = animation.FuncAnimation(
+        streamer.fig, 
+        streamer.update_plot, 
+        interval=1000 // streamer.scanRate,  # Update at scan rate
+        cache_frame_data=False,
+        blit=False
+    )
+    
+    plt.tight_layout(pad=3.0)
+    plt.show()  # This blocks until window is closed
 
+    # Cleanup when animation window closes
+    streamer.stop_scanning(None, None)
 
 if __name__ == "__main__":
     main()
