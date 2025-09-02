@@ -364,11 +364,9 @@ class FVSLJ:
                 j = self.signals.index(signal_name)
                 ax = self.axes[i][j]
             
-                # Only update limits if we have data
-                if xdata:
-                    ax.set_xlim(max(0, current_time - 10), current_time)
-                    ax.relim()
-                    ax.autoscale_view()
+                ax.relim() #making sure x-axis is dynamically moving 
+                ax.autoscale_view()
+                ax.set_xlim(max(0, current_time - 10), current_time)
 
         return [line for dev in self.device_lines.values() for line in dev.values()]
 
@@ -401,7 +399,7 @@ def main():
     
     streamer.device_configurations = get_device_configurations("configurations.txt")
    
-   # Initialize graphs once
+    # Initialize graphs once
     streamer.initialize_graphs()
     
     # Start the data collection thread
@@ -410,38 +408,20 @@ def main():
     data_thread.start()
 
     # Wait a moment for data to start flowing before animation
-    time.sleep(2.0)  # Give more time for data to accumulate
+    time.sleep(0.5)
     
-    # Configure matplotlib for better performance
-    plt.rcParams['animation.html'] = 'jshtml'  # Better backend for performance
-    plt.rcParams['figure.max_open_warning'] = 50  # Increase if needed
-    
-    # Start the animation with original settings but optimized backend
+    # Start the animation in the main thread
     print("Starting animation...")
-    
-    # Use the original animation approach but with performance tweaks
     streamer.ani = animation.FuncAnimation(
         streamer.fig, 
         streamer.update_plot, 
-        interval=50,  # Fixed 50ms interval (20 FPS) instead of scan rate
+        interval=1000 // streamer.scanRate,  # Update at scan rate
         cache_frame_data=False,
-        blit=False,  # Keep blit disabled for complex plots
-        repeat=False
+        blit=False
     )
     
     plt.tight_layout(pad=3.0)
-    
-    # Use non-blocking show first to initialize, then switch to blocking
-    plt.show(block=False)
-    
-    # Force an initial draw
-    streamer.fig.canvas.draw()
-    
-    # Small delay to ensure window is ready
-    time.sleep(0.5)
-    
-    # Now switch to blocking show (this will handle the main loop)
-    plt.show(block=True)
+    plt.show()  # This blocks until window is closed
 
     # Cleanup when animation window closes
     streamer.stop_scanning(None, None)
