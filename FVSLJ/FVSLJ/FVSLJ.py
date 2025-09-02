@@ -348,11 +348,6 @@ class FVSLJ:
         self.start_event.set()  # Ensure all threads are released
     
     def update_plot(self, frames):
-        if not self.keep_scanning:
-            return []
-    
-        lines_to_update = []
-    
         for device_name, signals in self.device_data.items():
             xdata = signals['x']
             if not xdata:
@@ -363,19 +358,20 @@ class FVSLJ:
             for signal_name in self.signals:
                 ydata = signals[signal_name]
                 line = self.device_lines[device_name][signal_name]
-            
-                # Update the line data
                 line.set_data(xdata, ydata)
-                lines_to_update.append(line)
 
                 i = list(self.device_configurations.keys()).index(device_name)
                 j = self.signals.index(signal_name)
                 ax = self.axes[i][j]
             
-                # Update x-axis to show last 10 seconds
-                ax.set_xlim(max(0, current_time - 10), max(10, current_time))
+                # Only update limits if we have data
+                if xdata:
+                    ax.set_xlim(max(0, current_time - 10), current_time)
+                    ax.relim()
+                    ax.autoscale_view()
 
-        return lines_to_update
+        return [line for dev in self.device_lines.values() for line in dev.values()]
+
     
     def start_animation(self):
         if self.low_event:
@@ -414,25 +410,38 @@ def main():
     data_thread.start()
 
     # Wait a moment for data to start flowing before animation
-    time.sleep(1.0)
+    time.sleep(2.0)  # Give more time for data to accumulate
     
-    # Start the animation with optimized settings
+    # Configure matplotlib for better performance
+    plt.rcParams['animation.html'] = 'jshtml'  # Better backend for performance
+    plt.rcParams['figure.max_open_warning'] = 50  # Increase if needed
+    
+    # Start the animation with original settings but optimized backend
     print("Starting animation...")
     
-    # Calculate optimal interval (ms between frames)
-    update_interval = max(1, 1000 // scanRate)  # Match update rate to data rate
-    
+    # Use the original animation approach but with performance tweaks
     streamer.ani = animation.FuncAnimation(
         streamer.fig, 
         streamer.update_plot, 
-        interval=update_interval,
+        interval=50,  # Fixed 50ms interval (20 FPS) instead of scan rate
         cache_frame_data=False,
-        blit=True,  # Enable blitting for better performance
+        blit=False,  # Keep blit disabled for complex plots
         repeat=False
     )
     
     plt.tight_layout(pad=3.0)
-    plt.show()  # This blocks until window closes
+    
+    # Use non-blocking show first to initialize, then switch to blocking
+    plt.show(block=False)
+    
+    # Force an initial draw
+    streamer.fig.canvas.draw()
+    
+    # Small delay to ensure window is ready
+    time.sleep(0.5)
+    
+    # Now switch to blocking show (this will handle the main loop)
+    plt.show(block=True)
 
     # Cleanup when animation window closes
     streamer.stop_scanning(None, None)
