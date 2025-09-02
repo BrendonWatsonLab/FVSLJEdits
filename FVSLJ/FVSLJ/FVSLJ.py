@@ -348,6 +348,11 @@ class FVSLJ:
         self.start_event.set()  # Ensure all threads are released
     
     def update_plot(self, frames):
+        if not self.keep_scanning:
+            return []
+    
+        lines_to_update = []
+    
         for device_name, signals in self.device_data.items():
             xdata = signals['x']
             if not xdata:
@@ -358,19 +363,19 @@ class FVSLJ:
             for signal_name in self.signals:
                 ydata = signals[signal_name]
                 line = self.device_lines[device_name][signal_name]
+            
+                # Update the line data
                 line.set_data(xdata, ydata)
+                lines_to_update.append(line)
 
                 i = list(self.device_configurations.keys()).index(device_name)
                 j = self.signals.index(signal_name)
                 ax = self.axes[i][j]
             
-                # Only update limits if we have data
-                if xdata:
-                    ax.set_xlim(max(0, current_time - 10), current_time)
-                    ax.relim()
-                    ax.autoscale_view()
+                # Update x-axis to show last 10 seconds
+                ax.set_xlim(max(0, current_time - 10), max(10, current_time))
 
-        return [line for dev in self.device_lines.values() for line in dev.values()]
+        return lines_to_update
     
     def start_animation(self):
         if self.low_event:
@@ -409,20 +414,25 @@ def main():
     data_thread.start()
 
     # Wait a moment for data to start flowing before animation
-    time.sleep(0.5)
+    time.sleep(1.0)
     
-    # Start the animation in the main thread
+    # Start the animation with optimized settings
     print("Starting animation...")
+    
+    # Calculate optimal interval (ms between frames)
+    update_interval = max(1, 1000 // scanRate)  # Match update rate to data rate
+    
     streamer.ani = animation.FuncAnimation(
         streamer.fig, 
         streamer.update_plot, 
-        interval=1000 // streamer.scanRate,  # Update at scan rate
+        interval=update_interval,
         cache_frame_data=False,
-        blit=False
+        blit=True,  # Enable blitting for better performance
+        repeat=False
     )
     
     plt.tight_layout(pad=3.0)
-    plt.show()  # This blocks until window is closed
+    plt.show()  # This blocks until window closes
 
     # Cleanup when animation window closes
     streamer.stop_scanning(None, None)
