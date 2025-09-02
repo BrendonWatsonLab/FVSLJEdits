@@ -185,21 +185,29 @@ class FVSLJ:
             if self.low_event:
                 break
 
-    def wait_for_high_input(self, handle, dio_pin="FIO2", threshold=0.5, poll_interval=0.1):
+    def wait_for_high_input(self, handle, dio_pin="FIO2", threshold=0.5, poll_interval=1.0):
         """Continuously monitor input pin and pause/resume data collection."""
+        print(f"Monitoring {dio_pin} for input changes (threshold: {threshold})")
+    
         while True:
             try:
                 state = ljm.eReadName(handle, dio_pin)
-
-                if state > threshold and not self.keep_scanning:
-                    print("High input detected → resuming data collection")
-                    self.keep_scanning = True
-                    self.start_event.set()
-
-                elif state <= threshold and self.keep_scanning:
-                    print("Low input detected → pausing data collection")
-                    self.keep_scanning = False
-                    self.start_event.clear()
+                current_time = datetime.now().strftime("%H:%M:%S")
+            
+                if state > threshold:
+                    print(f"[{current_time}] High input detected on {dio_pin}: {state:.2f}V")
+                    if not self.keep_scanning:
+                        print("Resuming data collection")
+                        self.keep_scanning = True
+                        self.start_event.set()
+                        self.low_event = False
+                else:
+                    print(f"[{current_time}] Low input detected on {dio_pin}: {state:.2f}V")
+                    if self.keep_scanning:
+                        print("Pausing data collection")
+                        self.keep_scanning = False
+                        self.start_event.clear()
+                        self.low_event = True
 
                 time.sleep(poll_interval)
 
@@ -208,7 +216,6 @@ class FVSLJ:
                 time.sleep(1)
 
 
-    
     
     #def wait_for_high_input(self, handle):
         #print("Waiting for high input on FIO2...")
@@ -242,14 +249,29 @@ class FVSLJ:
         try:
             handle, device_type = self.open_labjack(serial)
             self.configure_stream(handle, device_type)
-            self.start_event.wait()  # Wait for the signal to start
-            self.start_stream(handle)
+        
+            # Wait for the signal to start with timeout to check exit condition
+            while not self.start_event.wait(timeout=0.1):
+                if not self.keep_scanning:
+                    print(f"Stopping {name} before start (low input detected)")
+                    return
+        
+            # Double-check we should still start after waiting
+            if not self.keep_scanning:
+                print(f"Aborting {name} start (low input detected after wait)")
+                return
+            
+            scan_rate = self.start_stream(handle)
 
-            # Start light control thread
-            light_state = None  # Initialize light state for this thread
-            light_thread = threading.Thread(target=self.light_control_thread, args=(handle, light_state))
-            light_thread.start()
-            self.threads.append(light_thread)
+            # Start light control thread if needed (as daemon, not added to global list)
+            if self.light_control:
+                light_state = False
+                light_thread = threading.Thread(
+                    target=self.light_control_thread, 
+                    args=(handle, light_state),
+                    daemon=True  # Don't keep this thread alive after main thread exits
+                )
+                light_thread.start()
 
             self.perform_stream_reads(handle, device_type, name)
 
@@ -277,19 +299,48 @@ class FVSLJ:
         controller_handle, _ = self.open_labjack(self.device_configurations[self.controller_labjack])
         controller_thread = threading.Thread(target=self.wait_for_high_input, args=(controller_handle,))
         #self.threads.append(controller_thread)
+        # Check initial state and set accordingly
+        initial_state = ljm.eReadName(controller_handle, "FIO2")
+        if initial_state > 0.5:
+            print("Initial high input detected - starting data collection")
+            self.keep_scanning = True
+            self.start_event.set()
+        else:
+            print("Initial low input detected - waiting for high input")
+            self.keep_scanning = False
+            self.start_event.clear()
+    
+        # Start the input monitoring thread
+        controller_thread = threading.Thread(
+            target=self.wait_for_high_input, 
+            args=(controller_handle,),
+            daemon=True
+        )
         controller_thread.start()
 
-        # Start the other devices
-        for name, serial in self.device_configurations.items():
-            thread = threading.Thread(target=self.stream_device, args=(name, serial))
-            self.threads.append(thread)
-            thread.start()
-
-        print("BEFORE THREAD JOIN")
-        for thread in self.threads:
-            thread.join()
-        print("AFTER THREAD JOIN")
-        return True
+        # Main data collection loop
+        while True:
+            if self.keep_scanning:
+                print("BEFORE THREAD JOIN - Starting data collection threads")
+                self.threads = []  # Reset threads
+            
+                # Start all device threads
+                for name, serial in self.device_configurations.items():
+                    if name == self.controller_labjack:
+                        continue  # Skip controller device for data collection
+                    
+                    thread = threading.Thread(target=self.stream_device, args=(name, serial))
+                    self.threads.append(thread)
+                    thread.start()
+            
+                # Wait for all threads to complete
+                for thread in self.threads:
+                    thread.join()
+                
+                print("AFTER THREAD JOIN - All data collection threads stopped")
+            else:
+                # Wait a bit before checking if we should start again
+                time.sleep(1)
 
     def stop_scanning(self, signum, frame):
         print("\nInterrupt received, stopping scans...")
@@ -357,28 +408,18 @@ def main():
     
     # Start the data collection thread
     data_thread = threading.Thread(target=streamer.run)
+    data_thread.daemon = True
     data_thread.start()
 
-    # Wait until streamer is ready
-    streamer.start_event.wait()
-
-    # Start the animation (this already runs in its own thread internally)
+    # Start the animation
+    streamer.initialize_graphs()
     streamer.start_animation()
 
-    # --- NEW: start input monitoring thread ---
-    first_device = next(iter(streamer.device_configurations.values()))
-    handle = first_device["handle"]
-
-    monitor_thread = threading.Thread(
-        target=streamer.wait_for_high_input,
-        args=(handle,),   # pass handle from config
-        daemon=True
-    )
-    monitor_thread.start()
-    # -----------------------------------------
-
-    # Block until data thread finishes (should run indefinitely unless stopped)
-    data_thread.join()
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        streamer.stop_scanning(None, None)
     
     #keep_going = True
     #while keep_going:
