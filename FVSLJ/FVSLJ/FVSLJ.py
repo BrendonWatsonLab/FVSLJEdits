@@ -185,16 +185,14 @@ class FVSLJ:
             if self.low_event:
                 break
 
-    def wait_for_high_input(self, handle, dio_pin="FIO2", threshold=0.5, poll_interval=1.0):
-        """Continuously monitor input pin and pause/resume data collection."""
-        print(f"Monitoring {dio_pin} for input changes (threshold: {threshold})")
-    
+    def wait_for_high_input(self, handle, dio_pin="FIO2", poll_interval=1.0):
+        #Continuously monitor input pin and pause/resume data collection   
         while True:
             try:
                 state = ljm.eReadName(handle, dio_pin)
                 current_time = datetime.now().strftime("%H:%M:%S")
             
-                if state > threshold:
+                if state > 0.5:
                     print(f"High input detected on FIO2.")
                     if not self.keep_scanning:
                         print("Resuming data collection")
@@ -255,20 +253,13 @@ class FVSLJ:
                 if not self.keep_scanning:
                     print(f"Stopping {name} before start (low input detected)")
                     return
-        
-            # Double-check we should still start after waiting
-            if not self.keep_scanning:
-                print(f"Aborting {name} start (low input detected after wait)")
-                return
             
             scan_rate = self.start_stream(handle)
 
-            # Start light control thread if needed (as daemon, not added to global list)
+            # Start light control thread 
             if self.light_control:
-                light_state = False
-                light_thread = threading.Thread(
-                    target=self.light_control_thread, 
-                    args=(handle, light_state),
+                light_state = None
+                light_thread = threading.Thread(target=self.light_control_thread, args=(handle, light_state),
                     daemon=True  # Don't keep this thread alive after main thread exits
                 )
                 light_thread.start()
@@ -299,6 +290,7 @@ class FVSLJ:
         controller_handle, _ = self.open_labjack(self.device_configurations[self.controller_labjack])
         controller_thread = threading.Thread(target=self.wait_for_high_input, args=(controller_handle,))
         #self.threads.append(controller_thread)
+        
         # Check initial state and set accordingly
         initial_state = ljm.eReadName(controller_handle, "FIO2")
         if initial_state > 0.5:
@@ -321,14 +313,11 @@ class FVSLJ:
         # Main data collection loop
         while True:
             if self.keep_scanning:
-                print("BEFORE THREAD JOIN - Starting data collection threads")
+                print("BEFORE THREAD JOIN")
                 self.threads = []  # Reset threads
             
                 # Start all device threads
                 for name, serial in self.device_configurations.items():
-                    if name == self.controller_labjack:
-                        continue  # Skip controller device for data collection
-                    
                     thread = threading.Thread(target=self.stream_device, args=(name, serial))
                     self.threads.append(thread)
                     thread.start()
@@ -337,7 +326,7 @@ class FVSLJ:
                 for thread in self.threads:
                     thread.join()
                 
-                print("AFTER THREAD JOIN - All data collection threads stopped")
+                print("AFTER THREAD JOIN")
             else:
                 # Wait a bit before checking if we should start again
                 time.sleep(1)
