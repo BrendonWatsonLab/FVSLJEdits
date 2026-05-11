@@ -1,14 +1,16 @@
-labjack_1_name : "RBB01"
-labjack_1_serial : 470030684
-labjack_2_name : "RBB02"
-labjack_2_serial : 470025058
-labjack_3_name : "RBB03"
-labjack_3_serial : 470031165
-labjack_4_name : "RBB04"
-labjack_4_serial : 470031514
-controller_labjack : "RBB04"
-output_directory : "C:/Users/WATSONLAB/Documents/Test Outputs"
-print_feature : 0
+samples_per_second : 100
+labjack_1_name : "LJ-17"
+labjack_1_serial : 470028150
+labjack_2_name : "LJ-18"
+labjack_2_serial : 470028160
+labjack_3_name : "LJ-19"
+labjack_3_serial : 470028170
+labjack_4_name : "LJ-20"
+labjack_4_serial : 470028180
+controller_labjack : "LJ-17"
+output_directory : "C:\Users\averygj\Downloads\Git"
+print_feature : 1
 light_control : 1
 light_time_on : 11:00
 light_time_off : 23:00
+dark_cycle : 5/11, 06:00

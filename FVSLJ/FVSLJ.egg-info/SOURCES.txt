@@ -3,6 +3,7 @@ README.md
 setup.py
 FVSLJ/FVSLJ.py
 FVSLJ/__init__.py
+FVSLJ/animationTest.py
 FVSLJ/configuration.py
 FVSLJ/data_record.py
 FVSLJ/readbin.py

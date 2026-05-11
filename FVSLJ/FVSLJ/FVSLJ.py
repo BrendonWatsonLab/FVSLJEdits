@@ -28,6 +28,7 @@ class FVSLJ:
         self.light_control = 0
         self.light_time_on = None
         self.light_time_off = None
+        self.dark_cycle = None
         self.controller_labjack = None
         self.output_directory = None
         self.start_event = threading.Event()  # Event to synchronize stream start
@@ -170,8 +171,22 @@ class FVSLJ:
         print("Light turned off")
 
     def light_control_thread(self, handle, light_state):
+        dark_cycle_switched = False  
+        print(self.dark_cycle)
         while self.keep_scanning:
-            current_time = datetime.now().time()
+            now = datetime.now()
+            current_time = now.time()
+
+            if self.dark_cycle is not None and not dark_cycle_switched:
+                if now >= self.dark_cycle:
+                    # Swap light_on and light_off
+                    self.light_time_on = self.light_time_off
+                    self.light_time_off = self.light_time_on
+                    dark_cycle_switched = True
+                    print("Dark cycle - light schedule swapped")
+                    print(f"Light on: {self.light_time_on}")
+                    print(f"Light off: {self.light_time_off}")
+
             if self.light_control == 1 and self.light_time_on is not None and self.light_time_off is not None:
                 if self.light_time_on <= current_time < self.light_time_off:
                     if light_state != True:
@@ -277,7 +292,8 @@ class FVSLJ:
 
     def run(self):
         self.device_configurations = get_device_configurations("configurations.txt")
-        self.light_control, self.light_time_on, self.light_time_off, self.controller_labjack, self.output_directory, samples_per_second = parse_aux_configurations("configurations.txt")
+        self.light_control, self.light_time_on, self.light_time_off, self.controller_labjack, self.output_directory, samples_per_second, self.dark_cycle = parse_aux_configurations("configurations.txt")
+        print(f"Dark cycle set to: {self.dark_cycle}")
         print(self.device_configurations)
         if self.controller_labjack not in self.device_configurations:
             raise ValueError(f"Controller_labjack '{self.controller_labjack}' is not a registered device.\nMake sure configuration file contains line to assign controller_labjack and that the assigned device exists.")
@@ -370,7 +386,7 @@ class FVSLJ:
 
 def main():
     # Parse configurations to get the sample rate
-    _, _, _, _, _, samples_per_second = parse_aux_configurations("configurations.txt")
+    _, _, _, _, _, samples_per_second, _ = parse_aux_configurations("configurations.txt")
 
     # Use the samples_per_second from the configuration file if it exists
     global SAMPLES_PER_SECOND
@@ -396,8 +412,9 @@ def main():
     data_thread.daemon = True
     data_thread.start()
 
+    
     # Wait a moment for data to start flowing before animation
-    time.sleep(0.5)
+    time.sleep(1)
     
     # Start the animation in the main thread
     print("Starting animation...")

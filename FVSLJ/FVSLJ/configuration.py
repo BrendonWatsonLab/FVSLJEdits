@@ -24,6 +24,7 @@ def parse_aux_configurations(file_path):
     controller_labjack = None
     output_directory = None
     samples_per_second = None
+    dark_cycle = None
 
     with open(file_path, 'r') as file:
         for line in file:
@@ -47,6 +48,14 @@ def parse_aux_configurations(file_path):
                         light_time_off = datetime.strptime(time_str.group(1), "%H:%M").time()
                     except ValueError as e:
                         print(f"Error parsing light_time_off: {e}")
+            elif "dark_cycle" in line:
+                time_str = re.search(r'dark_cycle\s*:\s*(\d{1,2}/\d{1,2},\s*\d{2}:\d{2})', line)
+                if time_str:
+                    try:
+                        dark_cycle = datetime.strptime(time_str.group(1), "%m/%d, %H:%M")
+                        dark_cycle = dark_cycle.replace(year=datetime.now().year)
+                    except ValueError as e:
+                        print(f"Error parsing dark_cycle: {e}")
             elif "controller_labjack" in line:
                 controller_labjack = re.search(r'controller_labjack\s*:\s*"([^"]+)"', line).group(1)
             elif "output_directory" in line:
@@ -59,4 +68,4 @@ def parse_aux_configurations(file_path):
         if light_time_on is None or light_time_off is None:
             raise ValueError("light_control is set to 1, but light_time_on or light_time_off is not set.")
 
-    return light_control, light_time_on, light_time_off, controller_labjack, output_directory, samples_per_second
+    return light_control, light_time_on, light_time_off, controller_labjack, output_directory, samples_per_second, dark_cycle
