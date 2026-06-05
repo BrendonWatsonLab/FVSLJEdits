@@ -289,7 +289,7 @@ class FVSLJ:
         # Open the controller_labjack device and start the thread to wait for high input
         controller_handle, _ = self.open_labjack(self.device_configurations[self.controller_labjack])
         controller_thread = threading.Thread(target=self.wait_for_high_input, args=(controller_handle,))
-        #self.threads.append(controller_thread)
+        self.threads.append(controller_thread)
         
         # Check initial state and set accordingly
         initial_state = ljm.eReadName(controller_handle, "FIO2")
