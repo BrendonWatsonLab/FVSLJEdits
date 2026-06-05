@@ -213,22 +213,6 @@ class FVSLJ:
                 print(f"Error monitoring input: {e}")
                 time.sleep(1)
 
-
-    
-    #def wait_for_high_input(self, handle):
-        #print("Waiting for high input on FIO2...")
-        #while self.keep_scanning:
-            #state = ljm.eReadName(handle, "FIO2")
-            #if state > 0.5:
-                #print("High input detected on FIO2.")
-                #self.start_event.set()  # Signal all threads to start
-                #self.low_event = False
-            #else:
-                #print("Low input detected on FIO2.")
-                #self.start_event.clear()
-                #self.low_event = True
-            #time.sleep(1)
-
     def stop_stream(self, handle):
         try:
             print("\nStop Stream")
@@ -241,12 +225,15 @@ class FVSLJ:
     def close_labjack(self, handle):
         ljm.close(handle)
 
-    def stream_device(self, name, serial):
+    def stream_device(self, name, serial, existing_handle=None, existing_device_type=None):
         print(f"\nConnecting to device {name} with serial number {serial}")
         handle = None
         try:
-            handle, device_type = self.open_labjack(serial)
-            self.configure_stream(handle, device_type)
+            if existing_handle is not None:
+                handle = existing_handle
+                device_type = existing_device_type
+            else:
+                handle, device_type = self.open_labjack(serial)
         
             # Wait for the signal to start with timeout to check exit condition
             while not self.start_event.wait(timeout=0.1):
@@ -254,6 +241,7 @@ class FVSLJ:
                     print(f"Stopping {name} before start (low input detected)")
                     return
             
+            self.configure_stream(handle, device_type) 
             scan_rate = self.start_stream(handle)
 
             # Start light control thread 
@@ -272,8 +260,9 @@ class FVSLJ:
             print(e)
         finally:
             if handle is not None:
-                self.stop_stream(handle)
-            #self.close_labjack(handle)
+                self.stop_stream(handle)       # always stop the stream
+                if existing_handle is None:
+                    self.close_labjack(handle) # only close if we opened it
 
     def run(self):
         self.device_configurations = get_device_configurations("configurations.txt")
@@ -287,10 +276,8 @@ class FVSLJ:
             os.makedirs(self.output_directory)
         
         # Open the controller_labjack device and start the thread to wait for high input
-        controller_handle, _ = self.open_labjack(self.device_configurations[self.controller_labjack])
-        controller_thread = threading.Thread(target=self.wait_for_high_input, args=(controller_handle,))
-        self.threads.append(controller_thread)
-        
+        controller_handle, controller_device_type = self.open_labjack(self.device_configurations[self.controller_labjack])
+
         # Check initial state and set accordingly
         initial_state = ljm.eReadName(controller_handle, "FIO2")
         if initial_state > 0.5:
@@ -318,14 +305,17 @@ class FVSLJ:
             
                 # Start all device threads
                 for name, serial in self.device_configurations.items():
-                    thread = threading.Thread(target=self.stream_device, args=(name, serial))
+                    if name == self.controller_labjack:
+                        thread = threading.Thread(target=self.stream_device, args=(name, serial, controller_handle, controller_device_type))
+                    else:
+                        thread = threading.Thread(target=self.stream_device, args=(name, serial))
                     self.threads.append(thread)
                     thread.start()
-            
+                
                 # Wait for all threads to complete
                 for thread in self.threads:
                     thread.join()
-                
+                    
                 print("AFTER THREAD JOIN")
             else:
                 # Wait a bit before checking if we should start again
@@ -363,9 +353,9 @@ class FVSLJ:
     def start_animation(self):
         if self.low_event:
             print("\nLow event detected - skipping animation start")
-        return
+            return
         
-    print("Animation ready to start")
+        print("Animation ready to start")
 
 
 def main():
