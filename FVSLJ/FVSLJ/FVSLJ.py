@@ -227,43 +227,26 @@ class FVSLJ:
 
     def stream_device(self, name, serial, existing_handle=None, existing_device_type=None):
         print(f"\nConnecting to device {name} with serial number {serial}")
-        handle = None
         try:
-            if existing_handle is not None:
-                handle = existing_handle
-                device_type = existing_device_type
-            else:
-                handle, device_type = self.open_labjack(serial)
-        
-            # Wait for the signal to start with timeout to check exit condition
-            while not self.start_event.wait(timeout=0.1):
-                if not self.keep_scanning:
-                    print(f"Stopping {name} before start (low input detected)")
-                    return
-            
-            self.configure_stream(handle, device_type) 
-            scan_rate = self.start_stream(handle)
+            handle, device_type = self.open_labjack(serial)
+            self.configure_stream(handle, device_type)
+            self.start_event.wait()  # Wait for the signal to start
+            self.start_stream(handle)
 
-            # Start light control thread 
-            if self.light_control:
-                light_state = None
-                light_thread = threading.Thread(target=self.light_control_thread, args=(handle, light_state),
-                    daemon=True  # Don't keep this thread alive after main thread exits
-                )
-                light_thread.start()
+            # Start light control thread
+            light_state = None  # Initialize light state for this thread
+            light_thread = threading.Thread(target=self.light_control_thread, args=(handle, light_state))
+            light_thread.start()
+            self.threads.append(light_thread)
 
             self.perform_stream_reads(handle, device_type, name)
-
         except ljm.LJMError as ljme:
             print(ljme)
         except Exception as e:
             print(e)
         finally:
-            if handle is not None:
-                self.stop_stream(handle)       # always stop the stream
-                if existing_handle is None:
-                    self.close_labjack(handle) # only close if we opened it
-
+            self.stop_stream(handle)
+        
     def run(self):
         self.device_configurations = get_device_configurations("configurations.txt")
         self.light_control, self.light_time_on, self.light_time_off, self.controller_labjack, self.output_directory, samples_per_second = parse_aux_configurations("configurations.txt")
@@ -297,29 +280,17 @@ class FVSLJ:
         )
         controller_thread.start()
 
-        # Main data collection loop
-        while True:
-            if self.keep_scanning:
-                print("BEFORE THREAD JOIN")
-                self.threads = []  # Reset threads
-            
-                # Start all device threads
-                for name, serial in self.device_configurations.items():
-                    if name == self.controller_labjack:
-                        thread = threading.Thread(target=self.stream_device, args=(name, serial, controller_handle, controller_device_type))
-                    else:
-                        thread = threading.Thread(target=self.stream_device, args=(name, serial))
-                    self.threads.append(thread)
-                    thread.start()
-                
-                # Wait for all threads to complete
-                for thread in self.threads:
-                    thread.join()
-                    
-                print("AFTER THREAD JOIN")
-            else:
-                # Wait a bit before checking if we should start again
-                time.sleep(1)
+        # Start the other devices
+        for name, serial in self.device_configurations.items():
+            thread = threading.Thread(target=self.stream_device, args=(name, serial))
+            self.threads.append(thread)
+            thread.start()
+
+        print("BEFORE THREAD JOIN")
+        for thread in self.threads:
+            thread.join()
+        print("AFTER THREAD JOIN")
+        return True
 
     def stop_scanning(self, signum, frame):
         print("\nInterrupt received, stopping scans...")
