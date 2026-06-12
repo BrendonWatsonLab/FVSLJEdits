@@ -6,7 +6,6 @@ labjack_3_name : "RBB03"
 labjack_3_serial : 470031165
 labjack_4_name : "RBB04"
 labjack_4_serial : 470031514
-controller_labjack : "RBB04"
 output_directory : "C:/Users/WATSONLAB/Documents/Test Outputs"
 print_feature : 0
 light_control : 1

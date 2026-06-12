@@ -28,7 +28,6 @@ class FVSLJ:
         self.light_control = 0
         self.light_time_on = None
         self.light_time_off = None
-        self.controller_labjack = None
         self.output_directory = None
         self.start_event = threading.Event()  # Event to synchronize stream start
         self.low_event = False
@@ -185,33 +184,33 @@ class FVSLJ:
             if self.low_event:
                 break
 
-    def wait_for_high_input(self, handle, dio_pin="FIO2", poll_interval=1.0):
-        #Continuously monitor input pin and pause/resume data collection   
-        while True:
-            try:
-                state = ljm.eReadName(handle, dio_pin)
-                current_time = datetime.now().strftime("%H:%M:%S")
+    # def wait_for_high_input(self, handle, dio_pin="FIO2", poll_interval=1.0):
+    #     #Continuously monitor input pin and pause/resume data collection   
+    #     while True:
+    #         try:
+    #             state = ljm.eReadName(handle, dio_pin)
+    #             current_time = datetime.now().strftime("%H:%M:%S")
             
-                if state > 0.5:
-                    print(f"High input detected on FIO2.")
-                    if not self.keep_scanning:
-                        print("Resuming data collection")
-                        self.keep_scanning = True
-                        self.start_event.set()
-                        self.low_event = False
-                else:
-                    print(f"Low input detected on FIO2.")
-                    if self.keep_scanning:
-                        print("Pausing data collection")
-                        self.keep_scanning = False
-                        self.start_event.clear()
-                        self.low_event = True
+    #             if state > 0.5:
+    #                 print(f"High input detected on FIO2.")
+    #                 if not self.keep_scanning:
+    #                     print("Resuming data collection")
+    #                     self.keep_scanning = True
+    #                     self.start_event.set()
+    #                     self.low_event = False
+    #             else:
+    #                 print(f"Low input detected on FIO2.")
+    #                 if self.keep_scanning:
+    #                     print("Pausing data collection")
+    #                     self.keep_scanning = False
+    #                     self.start_event.clear()
+    #                     self.low_event = True
 
-                time.sleep(poll_interval)
+    #             time.sleep(poll_interval)
 
-            except Exception as e:
-                print(f"Error monitoring input: {e}")
-                time.sleep(1)
+    #         except Exception as e:
+    #             print(f"Error monitoring input: {e}")
+    #             time.sleep(1)
 
     def stop_stream(self, handle):
         try:
@@ -230,7 +229,7 @@ class FVSLJ:
         try:
             handle, device_type = self.open_labjack(serial)
             self.configure_stream(handle, device_type)
-            self.start_event.wait()  # Wait for the signal to start
+            self.start_event.set()  # start thread here 
             self.start_stream(handle)
 
             # Start light control thread
@@ -249,37 +248,9 @@ class FVSLJ:
         
     def run(self):
         self.device_configurations = get_device_configurations("configurations.txt")
-        self.light_control, self.light_time_on, self.light_time_off, self.controller_labjack, self.output_directory, samples_per_second = parse_aux_configurations("configurations.txt")
+        self.light_control, self.light_time_on, self.light_time_off,  self.output_directory, samples_per_second = parse_aux_configurations("configurations.txt")
         print(self.device_configurations)
-        if self.controller_labjack not in self.device_configurations:
-            raise ValueError(f"Controller_labjack '{self.controller_labjack}' is not a registered device.\nMake sure configuration file contains line to assign controller_labjack and that the assigned device exists.")
-
-        # Ensure the output directory exists
-        if not os.path.exists(self.output_directory):
-            os.makedirs(self.output_directory)
-        
-        # Open the controller_labjack device and start the thread to wait for high input
-        controller_handle, controller_device_type = self.open_labjack(self.device_configurations[self.controller_labjack])
-
-        # Check initial state and set accordingly
-        initial_state = ljm.eReadName(controller_handle, "FIO2")
-        if initial_state > 0.5:
-            print("Initial high input detected - starting data collection")
-            self.keep_scanning = True
-            self.start_event.set()
-        else:
-            print("Initial low input detected - waiting for high input")
-            self.keep_scanning = False
-            self.start_event.clear()
     
-        # Start the input monitoring thread
-        controller_thread = threading.Thread(
-            target=self.wait_for_high_input, 
-            args=(controller_handle,),
-            daemon=True
-        )
-        controller_thread.start()
-
         # Start the other devices
         for name, serial in self.device_configurations.items():
             thread = threading.Thread(target=self.stream_device, args=(name, serial))
@@ -354,7 +325,7 @@ def main():
     
     # Start the data collection thread
     data_thread = threading.Thread(target=streamer.run)
-    data_thread.daemon = True
+    #data_thread.daemon = True
     data_thread.start()
 
     # Wait a moment for data to start flowing before animation

@@ -21,7 +21,6 @@ def parse_aux_configurations(file_path):
     light_control = 0
     light_time_on = None
     light_time_off = None
-    controller_labjack = None
     output_directory = None
     samples_per_second = None
 
@@ -47,8 +46,6 @@ def parse_aux_configurations(file_path):
                         light_time_off = datetime.strptime(time_str.group(1), "%H:%M").time()
                     except ValueError as e:
                         print(f"Error parsing light_time_off: {e}")
-            elif "controller_labjack" in line:
-                controller_labjack = re.search(r'controller_labjack\s*:\s*"([^"]+)"', line).group(1)
             elif "output_directory" in line:
                 output_directory = re.search(r'output_directory\s*:\s*"([^"]+)"', line).group(1)
             elif "samples_per_second" in line:
@@ -59,4 +56,4 @@ def parse_aux_configurations(file_path):
         if light_time_on is None or light_time_off is None:
             raise ValueError("light_control is set to 1, but light_time_on or light_time_off is not set.")
 
-    return light_control, light_time_on, light_time_off, controller_labjack, output_directory, samples_per_second
+    return light_control, light_time_on, light_time_off, output_directory, samples_per_second
