@@ -302,7 +302,7 @@ class FVSLJ:
 
 def main():
     # Parse configurations to get the sample rate
-    _, _, _, _, _, samples_per_second = parse_aux_configurations("configurations.txt")
+    _, _, _, _, samples_per_second = parse_aux_configurations("configurations.txt")
 
     # Use the samples_per_second from the configuration file if it exists
     global SAMPLES_PER_SECOND
