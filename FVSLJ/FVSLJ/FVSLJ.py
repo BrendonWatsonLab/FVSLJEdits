@@ -10,6 +10,7 @@ from FVSLJ.configuration import get_device_configurations, parse_aux_configurati
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+import serial
 
 # Default value for samples per second
 SAMPLES_PER_SECOND = 51
@@ -184,33 +185,33 @@ class FVSLJ:
             if self.low_event:
                 break
 
-    # def wait_for_high_input(self, handle, dio_pin="FIO2", poll_interval=1.0):
-    #     #Continuously monitor input pin and pause/resume data collection   
-    #     while True:
-    #         try:
-    #             state = ljm.eReadName(handle, dio_pin)
-    #             current_time = datetime.now().strftime("%H:%M:%S")
-            
-    #             if state > 0.5:
-    #                 print(f"High input detected on FIO2.")
-    #                 if not self.keep_scanning:
-    #                     print("Resuming data collection")
-    #                     self.keep_scanning = True
-    #                     self.start_event.set()
-    #                     self.low_event = False
-    #             else:
-    #                 print(f"Low input detected on FIO2.")
-    #                 if self.keep_scanning:
-    #                     print("Pausing data collection")
-    #                     self.keep_scanning = False
-    #                     self.start_event.clear()
-    #                     self.low_event = True
+    def wait_for_high_input(self):
+        #Continuously monitor input pin and pause/resume data collection   
+        while True:
+            try:
+                ser = serial.Serial('COM3', 9600)
+                current_state = not ser.cts
 
-    #             time.sleep(poll_interval)
+                if current_state:
+                    print(f"High input")
+                    if not self.keep_scanning:
+                        print("Resuming data collection")
+                        self.keep_scanning = True
+                        self.start_event.set()
+                        self.low_event = False
+                else:
+                    print(f"Low input")
+                    if self.keep_scanning:
+                        print("Pausing data collection")
+                        self.keep_scanning = False
+                        self.start_event.clear()
+                        self.low_event = True
 
-    #         except Exception as e:
-    #             print(f"Error monitoring input: {e}")
-    #             time.sleep(1)
+                time.sleep(1.0)
+
+            except Exception as e:
+                print(f"Error monitoring input: {e}")
+                time.sleep(1)
 
     def stop_stream(self, handle):
         try:
@@ -229,7 +230,7 @@ class FVSLJ:
         try:
             handle, device_type = self.open_labjack(serial)
             self.configure_stream(handle, device_type)
-            self.start_event.set()  # start thread here 
+            self.start_event.wait()  # start thread here 
             self.start_stream(handle)
 
             # Start light control thread
