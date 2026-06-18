@@ -188,30 +188,25 @@ class FVSLJ:
     def wait_for_high_input(self):
         #Continuously monitor input pin and pause/resume data collection   
         while True:
-            try:
-                ser = serial.Serial('COM3', 9600)
-                current_state = not ser.cts
+            ser = serial.Serial('COM3', 9600)
+            current_state = not ser.cts
 
-                if current_state:
-                    print(f"High input")
-                    if not self.keep_scanning:
-                        print("Resuming data collection")
-                        self.keep_scanning = True
-                        self.start_event.set()
-                        self.low_event = False
-                else:
-                    print(f"Low input")
-                    if self.keep_scanning:
-                        print("Pausing data collection")
-                        self.keep_scanning = False
-                        self.start_event.clear()
-                        self.low_event = True
+            if current_state:
+                print(f"High input")
+                if not self.keep_scanning:
+                    print("Resuming data collection")
+                    self.keep_scanning = True
+                    self.start_event.set()
+                    self.low_event = False
+            else:
+                print(f"Low input")
+                if self.keep_scanning:
+                    print("Pausing data collection")
+                    self.keep_scanning = False
+                    self.start_event.clear()
+                    self.low_event = True
 
-                time.sleep(1.0)
-
-            except Exception as e:
-                print(f"Error monitoring input: {e}")
-                time.sleep(1)
+            time.sleep(1.0)
 
     def stop_stream(self, handle):
         try:
