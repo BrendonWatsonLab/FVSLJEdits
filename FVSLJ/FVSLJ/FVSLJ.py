@@ -187,12 +187,13 @@ class FVSLJ:
 
     def wait_for_high_input(self):
         #Continuously monitor input pin and pause/resume data collection   
+        ser = serial.Serial('COM3', 9600)
         while True:
-            ser = serial.Serial('COM3', 9600)
             current_state = not ser.cts
 
             if current_state:
                 print(f"High input")
+                self.start_event.set()
                 if not self.keep_scanning:
                     print("Resuming data collection")
                     self.keep_scanning = True
@@ -222,10 +223,11 @@ class FVSLJ:
 
     def stream_device(self, name, serial, existing_handle=None, existing_device_type=None):
         print(f"\nConnecting to device {name} with serial number {serial}")
+        handle = None
         try:
             handle, device_type = self.open_labjack(serial)
             self.configure_stream(handle, device_type)
-            self.start_event.wait()  # start thread here 
+            self.start_event.wait()  # Wait for thread to be true 
             self.start_stream(handle)
 
             # Start light control thread
@@ -241,23 +243,26 @@ class FVSLJ:
             print(e)
         finally:
             self.stop_stream(handle)
+            if handle is not None:
+                self.close_labjack(handle)
         
     def run(self):
-        self.device_configurations = get_device_configurations("configurations.txt")
-        self.light_control, self.light_time_on, self.light_time_off,  self.output_directory, samples_per_second = parse_aux_configurations("configurations.txt")
-        print(self.device_configurations)
-    
-        # Start the other devices
-        for name, serial in self.device_configurations.items():
-            thread = threading.Thread(target=self.stream_device, args=(name, serial))
-            self.threads.append(thread)
-            thread.start()
+        while True:
+            self.device_configurations = get_device_configurations("configurations.txt")
+            self.light_control, self.light_time_on, self.light_time_off,  self.output_directory, samples_per_second = parse_aux_configurations("configurations.txt")
+            print(self.device_configurations)
 
-        print("BEFORE THREAD JOIN")
-        for thread in self.threads:
-            thread.join()
-        print("AFTER THREAD JOIN")
-        return True
+            self.threads = [] #clearing threads every loop
+            # Start the other devices
+            for name, serial in self.device_configurations.items():
+                thread = threading.Thread(target=self.stream_device, args=(name, serial))
+                self.threads.append(thread)
+                thread.start()
+
+            print("BEFORE THREAD JOIN")
+            for thread in self.threads:
+                thread.join()
+            print("AFTER THREAD JOIN")
 
     def stop_scanning(self, signum, frame):
         print("\nInterrupt received, stopping scans...")
@@ -318,6 +323,11 @@ def main():
    
     # Initialize graphs once
     streamer.initialize_graphs()
+
+    #Monitoring for high input thread
+    high_input = threading.Thread(target=streamer.wait_for_high_input)
+    high_input.daemon = True
+    high_input.start()
     
     # Start the data collection thread
     data_thread = threading.Thread(target=streamer.run)
@@ -339,6 +349,7 @@ def main():
     
     plt.tight_layout(pad=3.0)
     plt.show()  # This blocks until window is closed
+
 
     # Cleanup when animation window closes
     streamer.stop_scanning(None, None)
